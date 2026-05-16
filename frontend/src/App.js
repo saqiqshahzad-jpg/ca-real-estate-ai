@@ -36,7 +36,7 @@ export default function App() {
   const isPasswordValid = pwdReqs.length && pwdReqs.uppercase && pwdReqs.number && pwdReqs.special;
 
   // --- 🧠 CHAT STATES ---
-  const defaultWelcomeMessage = { role: 'ai', text: "Hello Alaaudin Bro! I am your Elite Real Estate Assistant. How can I help you today?", id: 1 };
+  const defaultWelcomeMessage = { role: 'ai', text: "Hello! I'm CA Real Estate ADVISOR. How can I help you today?", id: 1 };
   
   const [messages, setMessages] = useState([defaultWelcomeMessage]);
   const [input, setInput] = useState('');
@@ -151,13 +151,13 @@ export default function App() {
             setAuthSuccess('');
             setEmail('');
             setPassword('');
-            setMessages([{ role: 'ai', text: `Welcome back, ${email.split('@')[0]}! Your secure workspace is ready.`, id: Date.now() }]);
+            setMessages([{ role: 'ai', text: `Welcome back, ${email.split('@')[0]}! Feel free to ask any questions.`, id: Date.now() }]);
         } else {
             setAuthError(data.detail || "Login failed");
         }
       }
     } catch (err) {
-        setAuthError("⚠️ Connection Error. Is Backend running?");
+        setAuthError("⚠️ Connection Error. Conatct the Host.");
     }
     setAuthLoading(false);
   };
@@ -172,7 +172,7 @@ export default function App() {
 
   // --- 🚀 CHAT LOGIC ---
   const startNewChat = () => {
-    setMessages([{ role: 'ai', text: user ? "Starting a new session. How can I assist you?" : "Hello Alaaudin Bro! I am your Elite Assistant. How can I help you today?", id: Date.now() }]);
+    setMessages([{ role: 'ai', text: user ? "Starting a new session. How can I assist you?" : "Hello! I'm your CA Real Estate ADVISOR. How can I help you today?", id: Date.now() }]);
     setActiveChatId(null);
     setIsTempChat(false);
     setShowTempDisclaimer(false);
@@ -261,7 +261,7 @@ export default function App() {
     } catch (e) {
       setMessages(prev => prev.map(m => m.id === aiMsgId ? { 
           role: 'ai', 
-          text: `⚠️ **Connection Failed:** Ensure backend is running.`, 
+          text: `⚠️ **Connection Failed:** Contact the Host.`, 
           id: aiMsgId 
       } : m));
     } finally {
@@ -401,7 +401,7 @@ export default function App() {
             ) : (
                 <div className={`flex flex-col items-center justify-center h-full opacity-50 px-4 text-center ${theme.textSecondary}`}>
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <p className="text-xs font-semibold">History disabled</p>
+                    <p className="text-xs font-semibold">History disabled, login to enable</p>
                 </div>
             )}
           </div>
@@ -453,7 +453,7 @@ export default function App() {
             ) : (
                <div className="text-center w-full">
                   <button onClick={() => {setAuthMode('login'); setShowAuthModal(true);}} className={`w-full ${isDarkMode ? 'bg-white text-black' : 'bg-slate-900 text-white'} font-extrabold py-3.5 rounded-xl text-sm hover:opacity-80 transition active:scale-95 shadow-md`}>
-                      Sign In to Elite AI
+                      Sign In / Sign Up
                   </button>
                </div>
             )}
@@ -469,7 +469,7 @@ export default function App() {
           <header className={`absolute top-0 left-0 w-full h-16 border-b ${theme.sidebarBorder} flex items-center justify-between px-8 ${theme.headerBg} backdrop-blur-xl z-30`}>
             <div className="flex items-center gap-3">
               <span className={`text-sm font-extrabold tracking-widest uppercase flex items-center gap-3 ${theme.textPrimary}`}>
-                 Elite AI Workspace
+                 CA Real Estate ADVISOR
                  <span className={`w-2.5 h-2.5 rounded-full ${accent.bg} animate-pulse ${accent.shadow}`}></span>
               </span>
             </div>
@@ -525,7 +525,7 @@ export default function App() {
                   ref={textareaRef}
                   rows="1"
                   className={`flex-1 bg-transparent ${theme.textPrimary} p-4 outline-none resize-none max-h-48 text-[15px] custom-scrollbar placeholder:${theme.textSecondary}`}
-                  placeholder="Message Elite AI..."
+                  placeholder="Ask anything about California Real Estate..."
                   value={input}
                   onChange={(e) => {
                      setInput(e.target.value);
@@ -543,7 +543,7 @@ export default function App() {
                 </button>
               </div>
               <p className={`text-center text-[11px] ${theme.textSecondary} mt-4 font-semibold tracking-[1px]`}>
-                AI can make mistakes. Verify important information with documents.
+                AI can make mistakes. Verify important information.
               </p>
             </div>
           </div>
