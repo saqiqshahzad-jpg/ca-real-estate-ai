@@ -25,7 +25,7 @@ app.add_middleware(
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # --- 📧 EMAIL CONFIGURATION ---
-SENDER_EMAIL = "saqiqshahzad@gmail.com" 
+SENDER_EMAIL = "spidermanbona@gmail.com" 
 APP_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 
 # --- 🗄️ DATABASE SETUP ---
