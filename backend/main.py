@@ -19,11 +19,11 @@ app.add_middleware(
 )
 
 # 🛑 ALAAUDIN BRO: Apni Groq Key yahan dalo
-client = Groq(api_key="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")
+client = Groq(api_key=os.environ.get("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"))
 
 # --- 📧 EMAIL CONFIGURATION ---
 SENDER_EMAIL = "saqiqshahzad@gmail.com" 
-APP_PASSWORD = "zanv jxvr nszg pqhd"
+APP_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 
 # --- 🗄️ DATABASE SETUP ---
 DB_FILE = "users.json"
