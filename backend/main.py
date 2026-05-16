@@ -19,7 +19,7 @@ app.add_middleware(
 )
 
 # 🛑 ALAAUDIN BRO: Apni Groq Key yahan dalo
-client = Groq(api_key=os.environ.get("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"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # --- 📧 EMAIL CONFIGURATION ---
 SENDER_EMAIL = "saqiqshahzad@gmail.com" 
