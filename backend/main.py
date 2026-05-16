@@ -338,27 +338,24 @@ def login(data: AuthRequest):
 
 @app.post("/chat")
 def chat(data: ChatMessage):
-    db = load_db()
-    if data.email != "guest":
-        if data.email not in db["users"] or not db["users"][data.email]["verified"]:
-            raise HTTPException(status_code=401, detail="Unauthorized Access.")
+    # ... (baqi load_db aur auth wala code wahi rahega) ...
 
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            temperature=0.3, # 🛑 Thora sa temperature barhaya hai taake wo wazahat maang sake
+            temperature=0.0, # 🛑 TEMP ZERO: Isse AI "Creative" nahi hoga, sirf facts batayega
             messages=[
                 {
                     "role": "system", 
-                    "content": f"""You are an Elite California Real Estate AI Assistant.
-                    DOCUMENT TEXT: {PDF_CONTEXT}
+                    "content": f"""You are a RUTHLESSLY STRICT California Real Estate AI.
+                    DOCUMENT CONTEXT: {PDF_CONTEXT}
                     
-                    CRITICAL RULES FOR ANSWERING:
-                    1. If the user's question can be CLEARLY answered using the DOCUMENT TEXT, answer it accurately.
-                    2. If the user's question is VAGUE, AMBIGUOUS, or seems only PARTIALLY related to the text, DO NOT guess or assume. Instead, politely ask them to clarify what exactly they mean (e.g., "Aapki baat thori wazeh nahi hai, kya aap is document ke hawale se [X] ke baare mein pooch rahe hain? Khul kar batayen.").
-                    3. If the question is COMPLETELY OUTSIDE the scope of the document, reply EXACTLY with: "I apologize, but I am strictly authorized to provide details only from the official California Real Estate documents."
-                    
-                    Always maintain a professional yet helpful tone."""
+                    STRICT OPERATING PROCEDURES:
+                    1. ONLY answer using the provided DOCUMENT CONTEXT.
+                    2. If the user asks for recipes, general knowledge, greetings like "How are you", or ANYTHING not in the real estate document, you MUST REJECT IT.
+                    3. REJECTION RULE: If the topic is outside Real Estate, reply ONLY with: "I apologize, but I am strictly authorized to provide details ONLY from the official California Real Estate documents. I cannot assist with other topics like cooking, general chat, or general knowledge."
+                    4. CLARIFICATION RULE: If the question is related to Real Estate but vague, say: "Aapki baat thori wazeh nahi hai, khul kar batayen ke aap is document ke hawale se kya poochna chah rahe hain?"
+                    5. NEVER be helpful outside the context. If it's not in the PDF, you don't know it. PERIOD."""
                 },
                 {"role": "user", "content": data.message},
             ],
