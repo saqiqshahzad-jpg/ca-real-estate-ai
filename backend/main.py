@@ -10,6 +10,9 @@ from pydantic import BaseModel
 from groq import Groq
 
 app = FastAPI()
+@app.get("/")
+def home():
+    return {"status": "CA Advisor Server is Running Online! ✅"}
 
 app.add_middleware(
     CORSMiddleware,
