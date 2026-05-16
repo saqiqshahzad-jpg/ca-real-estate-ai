@@ -1,4 +1,6 @@
-import logoImg from './logo.png'; // 
+import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import logoImg from './logo.png'; // 📸 Logo must be in frontend/src/ folder
 
 // --- 🎨 GLOBAL THEME & ACCENT CONFIG ---
 const accentColors = {
@@ -7,11 +9,9 @@ const accentColors = {
   rose: { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', glow: 'bg-rose-500/20' },
 };
 
-// 🛑 UMAR BHAI FIX: Ab yahan apna asli live link dalo
 const API_URL = 'https://ca-estate-api.onrender.com'; 
 
 export default function App() {
-  // --- 🧠 AUTH STATES ---
   const [user, setUser] = useState(null); 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login'); 
@@ -23,7 +23,6 @@ export default function App() {
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  // --- 🧠 PASSWORD VALIDATION ---
   const pwdReqs = {
     length: password.length >= 8,
     uppercase: /[A-Z]/.test(password),
@@ -32,34 +31,27 @@ export default function App() {
   };
   const isPasswordValid = pwdReqs.length && pwdReqs.uppercase && pwdReqs.number && pwdReqs.special;
 
-  // --- 🧠 CHAT STATES ---
-  const defaultWelcomeMessage = { role: 'ai', text: "Hello! I'm a CA Real Estate Advisor. How can I help you today?", id: 1 };
+  const defaultWelcomeMessage = { role: 'ai', text: "Hello! I'm your CA Real Estate Advisor. How can I help you today?", id: 1 };
   
   const [messages, setMessages] = useState([defaultWelcomeMessage]);
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useState([]); 
   const [activeChatId, setActiveChatId] = useState(null);
-  
   const [isTempChat, setIsTempChat] = useState(false);
   const [showTempDisclaimer, setShowTempDisclaimer] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  
-  // 🌓 THEME STATES
   const [isDarkMode, setIsDarkMode] = useState(true); 
   const [selectedAccent, setSelectedAccent] = useState('blue');
 
-  // 🛑 UMAR BHAI FIX: Naya ref jo sirf chat container ko scroll karega, screen ko nahi!
   const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // --- 💾 INIT ---
   useEffect(() => {
-    const savedUser = localStorage.getItem('al_elite_user_final3');
+    const savedUser = localStorage.getItem('ca_advisor_user');
     if (savedUser) setUser(JSON.parse(savedUser));
-
-    const savedData = JSON.parse(localStorage.getItem('al_pro_estate_final3')) || {};
+    const savedData = JSON.parse(localStorage.getItem('ca_advisor_data')) || {};
     setChatHistory(savedData.history || []);
     if(savedData.accent) setSelectedAccent(savedData.accent);
     if(savedData.isDarkMode !== undefined) setIsDarkMode(savedData.isDarkMode);
@@ -67,623 +59,152 @@ export default function App() {
 
   useEffect(() => {
     if (user && !isTempChat) {
-      localStorage.setItem('al_pro_estate_final3', JSON.stringify({
-        history: chatHistory,
-        accent: selectedAccent,
-        isDarkMode: isDarkMode
-      }));
+      localStorage.setItem('ca_advisor_data', JSON.stringify({ history: chatHistory, accent: selectedAccent, isDarkMode }));
     }
   }, [chatHistory, selectedAccent, isDarkMode, user, isTempChat]);
 
-  // 🛑 UMAR BHAI FIX: The Ultimate Scroll Fix. Ab scrollIntoView ka azaab khatam!
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
     }
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+  useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
-
-  // --- 🔐 AUTH LOGIC ---
   const handleAuth = async (e) => {
     e.preventDefault();
-    setAuthError('');
-    setAuthSuccess('');
-    
-    if (authMode === 'signup' && !isPasswordValid) {
-        setAuthError("Please meet all password requirements.");
-        return;
-    }
-
+    setAuthError(''); setAuthSuccess('');
+    if (authMode === 'signup' && !isPasswordValid) return setAuthError("Password invalid.");
     setAuthLoading(true);
-
     try {
-      if (authMode === 'signup') {
-        const res = await fetch(`${API_URL}/signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-            setAuthMode('otp');
-            setAuthSuccess('✅ OTP Sent! Check your email.');
-        } else {
-            setAuthError(data.detail || "Signup failed");
-        }
-      } else if (authMode === 'otp') {
-        const res = await fetch(`${API_URL}/verify-otp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp }),
-          });
-          const data = await res.json();
-          if (res.ok) {
-              setAuthMode('login');
-              setAuthSuccess('✅ Verified! Now please login.');
-              setOtp('');
-              setPassword('');
-          } else {
-              setAuthError(data.detail || "Invalid OTP");
+      const endpoint = authMode === 'signup' ? 'signup' : authMode === 'otp' ? 'verify-otp' : 'login';
+      const body = authMode === 'otp' ? { email, otp } : { email, password };
+      const res = await fetch(`${API_URL}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+          if (authMode === 'signup') { setAuthMode('otp'); setAuthSuccess('OTP Sent!'); }
+          else if (authMode === 'otp') { setAuthMode('login'); setAuthSuccess('Verified!'); }
+          else {
+              setUser({ email });
+              localStorage.setItem('ca_advisor_user', JSON.stringify({ email }));
+              setShowAuthModal(false);
           }
-      } else { 
-        const res = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-            const userData = { email };
-            setUser(userData);
-            localStorage.setItem('al_elite_user_final3', JSON.stringify(userData));
-            setShowAuthModal(false);
-            setAuthError('');
-            setAuthSuccess('');
-            setEmail('');
-            setPassword('');
-            setMessages([{ role: 'ai', text: `Welcome back, ${email.split('@')[0]}! Your CA Real Estate Advisor is ready.`, id: Date.now() }]);
-        } else {
-            setAuthError(data.detail || "Login failed");
-        }
-      }
-    } catch (err) {
-        setAuthError("⚠️ Connection Error. Contact the Host.");
-    }
+      } else { setAuthError(data.detail || "Action failed"); }
+    } catch { setAuthError("Connection Error."); }
     setAuthLoading(false);
-  };
-
-  const logout = () => {
-      setUser(null);
-      localStorage.removeItem('al_elite_user_final3');
-      setChatHistory([]);
-      setMessages([defaultWelcomeMessage]);
-      setShowProfileSettings(false);
-  };
-
-  // --- 🚀 CHAT LOGIC ---
-  const startNewChat = () => {
-    setMessages([{ role: 'ai', text: user ? "Starting a new session. How can I assist you?" : "Hello! I'm a CA Real Estate Advisor. How can I help you today?", id: Date.now() }]);
-    setActiveChatId(null);
-    setIsTempChat(false);
-    setShowTempDisclaimer(false);
-  };
-
-  const toggleTempChat = () => {
-    if (!isTempChat) {
-      setShowTempDisclaimer(true);
-      setMessages([{ role: 'ai', text: "🕶️ Incognito Mode Activated. Nothing is being saved.", id: Date.now() }]);
-      setActiveChatId(null);
-    } else {
-      setShowTempDisclaimer(false);
-      startNewChat();
-    }
-    setIsTempChat(!isTempChat);
-  };
-
-  const loadChat = (id) => {
-    const chat = chatHistory.find(c => c.id === id);
-    if (chat) {
-      setMessages(chat.msgs);
-      setActiveChatId(id);
-      setIsTempChat(false);
-    }
-  };
-
-  const deleteChat = (id, e) => {
-    e.stopPropagation(); 
-    setChatHistory(prev => prev.filter(c => c.id !== id));
-    if (activeChatId === id) startNewChat();
   };
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
-
     const userInput = input;
-    const userMsgId = Date.now();
-    const aiMsgId = userMsgId + 1;
-
-    const userMsg = { role: 'user', text: userInput, id: userMsgId };
-    
+    const userMsg = { role: 'user', text: userInput, id: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
-
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
-
-    setMessages(prev => [...prev, { role: 'ai', text: '_thinking_', id: aiMsgId }]);
-
     try {
-      const requestBody = { 
-          message: userInput, 
-          email: user ? user.email : "guest" 
-      };
-
       const response = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ message: userInput, email: user ? user.email : "guest" }),
       });
-      
       const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || "Server Error");
-      }
-
-      const aiMsg = { role: 'ai', text: data.response || "No response.", id: aiMsgId };
-      
-      setMessages(prev => prev.map(m => m.id === aiMsgId ? aiMsg : m));
-
+      const aiMsg = { role: 'ai', text: data.response || "No response.", id: Date.now() + 1 };
+      setMessages(prev => [...prev, aiMsg]);
       if (user && !isTempChat) {
-        setChatHistory(prevHistory => {
-          let updatedHistory;
-          const currentChatMsgs = [...messages, userMsg, aiMsg];
+        setChatHistory(prev => {
           if (!activeChatId) {
-            const newId = Date.now() + 2;
-            setActiveChatId(newId);
-            updatedHistory = [{ id: newId, title: userInput.substring(0, 30) + '...', msgs: currentChatMsgs }, ...prevHistory];
-          } else {
-            updatedHistory = prevHistory.map(c => c.id === activeChatId ? { ...c, msgs: currentChatMsgs } : c);
+            setActiveChatId(userMsg.id);
+            return [{ id: userMsg.id, title: userInput.substring(0, 30), msgs: [...messages, userMsg, aiMsg] }, ...prev];
           }
-          return updatedHistory;
+          return prev.map(c => c.id === activeChatId ? { ...c, msgs: [...c.msgs, userMsg, aiMsg] } : c);
         });
       }
-    } catch (e) {
-      setMessages(prev => prev.map(m => m.id === aiMsgId ? { 
-          role: 'ai', 
-          text: `⚠️ **Connection Failed:** Contact the Host.`, 
-          id: aiMsgId 
-      } : m));
-    } finally {
-      setIsTyping(false);
-    }
+    } catch { setMessages(prev => [...prev, { role: 'ai', text: "⚠️ Server Down.", id: Date.now() }]); }
+    setIsTyping(false);
   };
 
-  // --- 🎨 THEME ENGINE ---
   const theme = {
     bg: isDarkMode ? 'bg-[#0a0a0a]' : 'bg-[#eef2f6]', 
     textPrimary: isDarkMode ? 'text-white' : 'text-slate-900',
-    textSecondary: isDarkMode ? 'text-gray-400' : 'text-slate-600',
-    
     sidebarBg: isDarkMode ? 'bg-[#111111]/90' : 'bg-white/90',
     sidebarBorder: isDarkMode ? 'border-white/10' : 'border-slate-300',
-    sidebarHover: isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-100',
-    activeHistory: isDarkMode ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900 font-bold',
-    
-    headerBg: isDarkMode ? 'bg-[#0a0a0a]/80' : 'bg-[#eef2f6]/80',
-    
-    chatBoxBgAI: isDarkMode ? 'bg-transparent text-gray-200' : 'bg-transparent text-slate-800',
     chatBoxBgUser: isDarkMode ? 'bg-[#222] text-white border-white/5' : 'bg-white text-slate-900 border-slate-300 shadow-md',
-    
-    inputWrapperBg: isDarkMode ? 'bg-[#1c1c1c]/90' : 'bg-white',
-    inputBorder: isDarkMode ? 'border-white/10 focus-within:border-neutral-500' : 'border-slate-300 focus-within:border-slate-500 shadow-md',
-    inputAreaGradient: isDarkMode ? 'from-[#0a0a0a] via-[#0a0a0a]/95' : 'from-[#eef2f6] via-[#eef2f6]/95',
-    
-    blurOrb1: isDarkMode ? 'bg-blue-900/20' : 'bg-blue-300/30',
-    blurOrb2: isDarkMode ? 'bg-purple-900/20' : 'bg-purple-300/30',
   };
-
   const accent = accentColors[selectedAccent];
 
   return (
     <>
-      {/* 🛑 UMAR BHAI'S ABSOLUTE LOCK CSS 🛑 */}
-      <style dangerouslySetInnerHTML={{__html: `
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body, #root { 
-            width: 100vw !important; 
-            height: 100vh !important; 
-            overflow: hidden !important; 
-            position: fixed !important; 
-            top: 0; left: 0;
-            background-color: ${isDarkMode ? '#0a0a0a' : '#eef2f6'};
-        }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        
-        .markdown-container strong { font-weight: 800; color: inherit; }
-        .markdown-container p { margin-bottom: 14px; }
-        .markdown-container ul { list-style-type: disc; margin-left: 20px; margin-bottom: 14px; }
-        .markdown-container li { margin-bottom: 6px; }
-        
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px;}
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #666; }
-      `}} />
+      <style dangerouslySetInnerHTML={{__html: `* { margin:0; padding:0; box-sizing:border-box; } html,body,#root{width:100vw; height:100vh; overflow:hidden; position:fixed; top:0; left:0; background-color:${isDarkMode?'#0a0a0a':'#eef2f6'};} .custom-scrollbar::-webkit-scrollbar{width:5px;} .custom-scrollbar::-webkit-scrollbar-thumb{background:#888; border-radius:10px;}`}} />
 
-      {/* 🛑 THE MASTER CONTAINER: ABSOLUTE FULL SCREEN 🛑 */}
-      <div className={`absolute inset-0 flex overflow-hidden ${theme.textPrimary} transition-colors duration-500 font-sans`}>
-        
-        {/* 🔮 GLASSMORPHISM BLURS 🔮 */}
-        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] ${theme.blurOrb1} rounded-full blur-[140px] pointer-events-none z-0`}></div>
-        <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] ${theme.blurOrb2} rounded-full blur-[160px] pointer-events-none z-0`}></div>
-
-        {/* ========================================== */}
-        {/* SIDEBAR                                    */}
-        {/* ========================================== */}
+      <div className={`absolute inset-0 flex overflow-hidden ${theme.textPrimary} font-sans`}>
+        {/* Sidebar */}
         <div className={`w-[280px] sm:w-[320px] h-full flex-shrink-0 ${theme.sidebarBg} backdrop-blur-3xl flex flex-col border-r ${theme.sidebarBorder} z-20`}>
-          
-          {/* --- SIDEBAR LOGO & NAME --- */}
-<div className="p-5 space-y-4 flex-shrink-0">
-  <div className="flex items-center gap-3">
-    {/ ./logo.png /}
-    <img src={logoImg} alt="CA Real Estate Advisor" className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" />
-    
-    <h1 className={`text-xl font-extrabold tracking-tighter ${theme.textPrimary}`}>
-       CA Real Estate Advisor <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
-    </h1>
-  </div>
-  
-  {/* New Conversation Button wahi rahega... */}
-</div>
-            
-            <button onClick={startNewChat} className={`w-full flex items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition active:scale-95 border ${theme.sidebarBorder} ${theme.sidebarHover} ${theme.textPrimary} shadow-sm`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              New Conversation
-            </button>
-
-            {user && (
-              <button onClick={toggleTempChat} className={`w-full flex items-center justify-between rounded-xl p-3.5 text-sm transition group border ${isTempChat ? `${accent.glow} ${accent.text} border-current` : `${theme.sidebarHover} border-transparent ${theme.textSecondary}`}`}>
-                 <span className="flex items-center gap-3">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  Incognito Mode
-                 </span>
-                 <div className={`w-9 h-5 rounded-full p-0.5 transition ${isTempChat ? accent.bg : (isDarkMode ? 'bg-neutral-700' : 'bg-slate-300')}`}>
-                    <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-200 ${isTempChat ? 'translate-x-4' : 'translate-x-0'}`} />
-                 </div>
-              </button>
-            )}
+          <div className="p-5 space-y-4 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <img src={logoImg} alt="Logo" className="w-10 h-10 rounded-lg object-cover shadow-lg border border-white/10" />
+              <h1 className={`text-lg font-black tracking-tighter ${theme.textPrimary}`}>CA Real Estate ADVISOR <span className={`text-[9px] px-1.5 py-0.5 rounded text-white ${accent.bg}`}>V3.0</span></h1>
+            </div>
+            <button onClick={() => {setMessages([defaultWelcomeMessage]); setActiveChatId(null);}} className={`w-full p-3 rounded-xl border ${theme.sidebarBorder} hover:bg-white/5 transition font-bold text-sm`}>+ New Conversation</button>
           </div>
 
-          {/* GUEST UPSELL OR SEARCH */}
-          <div className="px-5 mb-4 flex-shrink-0">
-              {!user ? (
-                  <div className={`bg-gradient-to-br ${isDarkMode ? 'from-blue-900/30 to-purple-900/30 border-blue-500/20' : 'from-blue-200/50 to-purple-200/50 border-blue-300'} border rounded-2xl p-6 text-center shadow-lg backdrop-blur-md relative overflow-hidden`}>
-                      <p className={`text-sm font-extrabold mb-2 ${theme.textPrimary}`}>Unlock Features</p>
-                      <p className={`text-xs mb-5 leading-relaxed ${theme.textSecondary}`}>Log in to save history and customize your AI.</p>
-                      <button onClick={() => {setAuthMode('login'); setShowAuthModal(true);}} className={`w-full ${isDarkMode ? 'bg-white text-black' : 'bg-slate-900 text-white'} font-extrabold py-3 rounded-xl text-sm hover:scale-105 transition active:scale-95 shadow-md`}>
-                          Sign In / Sign Up
-                      </button>
-                  </div>
-              ) : (
-                <div className="relative">
-                  <svg className={`absolute left-4 top-3.5 ${theme.textSecondary}`} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                  <input type="text" placeholder="Search history..." className={`w-full ${isDarkMode ? 'bg-black/30' : 'bg-white/60'} rounded-xl pl-10 pr-4 py-3 text-xs border ${theme.sidebarBorder} outline-none focus:${accent.border} transition shadow-inner ${theme.textPrimary} placeholder:${theme.textSecondary}`} onChange={(e) => setSearchQuery(e.target.value)} />
-                </div>
-              )}
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 custom-scrollbar">
+            {chatHistory.map(chat => (
+              <div key={chat.id} onClick={() => {setMessages(chat.msgs); setActiveChatId(chat.id);}} className={`p-3 rounded-xl cursor-pointer text-sm truncate ${activeChatId === chat.id ? 'bg-white/10' : 'hover:bg-white/5'}`}>{chat.title}</div>
+            ))}
           </div>
 
-          {/* CHAT HISTORY LIST */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5 custom-scrollbar min-h-0">
-            {user ? (
-                <>
-                    <p className={`text-[10px] ${theme.textSecondary} font-bold uppercase tracking-widest px-2 mb-2 sticky top-0 bg-transparent backdrop-blur-sm py-1`}>Recent Chats</p>
-                    {chatHistory.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase())).map(chat => (
-                      <div key={chat.id} onClick={() => loadChat(chat.id)} className={`p-3 rounded-xl cursor-pointer text-sm transition group flex items-center gap-3 ${activeChatId === chat.id ? theme.activeHistory : `${theme.sidebarHover} ${theme.textSecondary} border border-transparent`}`}>
-                        <svg className="flex-shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        <span className="truncate flex-1 font-medium">{chat.title}</span>
-                        {activeChatId === chat.id && (
-                          <button onClick={(e) => deleteChat(chat.id, e)} className="text-gray-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {chatHistory.length === 0 && <div className="text-center mt-10"><p className={`text-[10px] font-bold uppercase tracking-widest ${theme.textSecondary}`}>No History</p></div>}
-                </>
-            ) : (
-                <div className={`flex flex-col items-center justify-center h-full opacity-50 px-4 text-center ${theme.textSecondary}`}>
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <p className="text-xs font-semibold">History disabled, Log in to save history</p>
-                </div>
-            )}
-          </div>
-
-          {/* ACCOUNT SETTINGS BUTTON */}
-          <div className={`p-4 border-t ${theme.sidebarBorder} relative bg-transparent flex-shrink-0`}>
-            {showProfileSettings && user && (
-              <div className={`absolute bottom-20 left-4 w-[270px] ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-white'} backdrop-blur-3xl rounded-3xl shadow-2xl border ${theme.sidebarBorder} overflow-hidden animate-slide-up z-50 p-2`}>
-                <div className={`p-4 border-b ${theme.sidebarBorder} flex items-center gap-4`}>
-                  <div className={`w-12 h-12 rounded-full ${accent.bg} text-white flex items-center justify-center font-extrabold text-xl shadow-inner`}>{user.email.charAt(0).toUpperCase()}</div>
-                  <div className="overflow-hidden">
-                      <p className={`text-sm font-extrabold truncate ${theme.textPrimary}`}>{user.email}</p>
-                      <span className={`text-[9px] px-2 py-0.5 rounded-md ${accent.glow} ${accent.text} mt-1 inline-block font-bold tracking-widest border border-current/20`}>VERIFIED</span>
-                  </div>
-                </div>
-                
-                <div className="p-3 space-y-4">
-                  <div className="flex items-center justify-between px-1">
-                    <span className={`text-xs font-bold ${theme.textSecondary}`}>Theme Mode</span>
-                    <button onClick={() => setIsDarkMode(!isDarkMode)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 ${isDarkMode ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20' : 'bg-indigo-500/10 text-indigo-600 hover:bg-indigo-100'}`}>
-                      {isDarkMode ? '💡 Light' : '🌙 Dark'}
-                    </button>
-                  </div>
-
-                  <div>
-                      <p className={`text-[10px] ${theme.textSecondary} font-bold uppercase tracking-widest px-1 mb-2`}>Color Accent</p>
-                      <div className={`flex gap-3 p-3 rounded-2xl ${isDarkMode ? 'bg-[#2a2a2a]/50' : 'bg-slate-100'} border ${theme.sidebarBorder} justify-center`}>
-                          {Object.keys(accentColors).map(key => (
-                              <button key={key} onClick={() => setSelectedAccent(key)} className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 shadow-md ${selectedAccent === key ? (isDarkMode ? 'border-white scale-110' : 'border-slate-800 scale-110') : 'border-transparent opacity-50'} ${accentColors[key].bg}`}></button>
-                          ))}
-                      </div>
-                  </div>
-
-                  <button onClick={logout} className={`w-full text-left p-3.5 hover:bg-red-500/10 text-red-500 rounded-xl text-sm transition font-bold flex items-center gap-3 border border-transparent hover:border-red-500/20`}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5m14 0-4 4m4-4-4-4"/></svg> Logout
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {user ? (
-              <button onClick={() => setShowProfileSettings(!showProfileSettings)} className={`w-full flex items-center gap-4 p-2.5 rounded-2xl transition ${theme.sidebarHover} border border-transparent shadow-sm group`}>
-                  <div className={`w-10 h-10 rounded-full ${accent.bg} text-white flex items-center justify-center font-extrabold text-sm group-hover:scale-105 transition shadow-md`}>{user.email.charAt(0).toUpperCase()}</div>
-                  <div className="flex-1 text-left overflow-hidden">
-                      <span className={`text-sm font-bold leading-tight block truncate ${theme.textPrimary}`}>{user.email}</span>
-                      <span className={`text-[10px] ${theme.textSecondary} font-medium`}>Settings & Theme</span>
-                  </div>
-              </button>
-            ) : (
-               <div className="text-center w-full">
-                  <button onClick={() => {setAuthMode('login'); setShowAuthModal(true);}} className={`w-full ${isDarkMode ? 'bg-white text-black' : 'bg-slate-900 text-white'} font-extrabold py-3.5 rounded-xl text-sm hover:opacity-80 transition active:scale-95 shadow-md`}>
-                      Sign In / Sign Up
-                  </button>
-               </div>
-            )}
+          <div className="p-4 border-t border-white/5">
+             {!user ? <button onClick={()=>setShowAuthModal(true)} className="w-full bg-blue-600 p-3 rounded-xl font-bold text-sm">Sign In / Sign Up</button> : <p className="text-[10px] opacity-40 truncate">{user.email}</p>}
           </div>
         </div>
 
-        {/* ========================================== */}
-        {/* MAIN CHAT AREA (ABSOLUTE COORDINATES FIX)  */}
-        {/* ========================================== */}
+        {/* Main Chat */}
         <div className="flex-1 h-full relative z-10 min-w-0">
-          
-          {/* HEADER (Pinned Top) */}
-          <header className={`absolute top-0 left-0 w-full h-16 border-b ${theme.sidebarBorder} flex items-center justify-between px-8 ${theme.headerBg} backdrop-blur-xl z-30`}>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm font-extrabold tracking-widest uppercase flex items-center gap-3 ${theme.textPrimary}`}>
-                 California Real Estate Advisor
-                 <span className={`w-2.5 h-2.5 rounded-full ${accent.bg} animate-pulse ${accent.shadow}`}></span>
-              </span>
-            </div>
-            {isTempChat && (
-              <span className="text-[10px] bg-indigo-500/10 text-indigo-500 px-3 py-1.5 rounded-full border border-indigo-500/30 font-bold flex items-center gap-1.5 shadow-sm">
-                  INCOGNITO ON
-              </span>
-            )}
+          <header className={`absolute top-0 left-0 w-full h-16 border-b ${theme.sidebarBorder} flex items-center justify-between px-8 backdrop-blur-xl z-30`}>
+            <span className="text-xs font-black tracking-widest uppercase opacity-70">CA Real Estate Advisor</span>
           </header>
 
-          {/* 🛑 UMAR BHAI FIX: chatContainerRef Added Here 🛑 */}
-          {/* SCROLLABLE MESSAGES LIST (Pinned Top to Bottom with massive padding) */}
-          <div ref={chatContainerRef} className="absolute top-16 bottom-0 left-0 w-full overflow-y-auto custom-scrollbar z-10 pb-[160px]">
-            <div className="max-w-4xl mx-auto w-full px-6 pt-10 flex flex-col gap-6">
-              
-              {messages.length === 0 && (
-                 <div className="flex flex-col items-center justify-center mt-20 opacity-80 select-none px-4 text-center animate-fade-in">
-                    <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 border ${theme.sidebarBorder} shadow-2xl backdrop-blur-xl ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`}>
-                        <svg className={theme.textSecondary} width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    </div>
-                    <h1 className={`text-4xl font-extrabold mt-4 tracking-tighter ${theme.textPrimary} mb-3`}>Ready to Assist.</h1>
-                    <p className={theme.textSecondary}>Ask questions based on your uploaded property documents.</p>
-                 </div>
-              )}
-
+          <div ref={chatContainerRef} className="absolute top-16 bottom-0 left-0 w-full overflow-y-auto custom-scrollbar z-10 pb-[120px] p-6">
+            <div className="max-w-3xl mx-auto w-full flex flex-col gap-6">
               {messages.map((msg, i) => (
-                <div key={msg.id || i} className={`flex gap-5 group animate-fade-in ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[11px] flex-shrink-0 shadow-md mt-1 transition-transform border ${msg.role === 'ai' ? `${accent.bg} text-white border-transparent` : (isDarkMode ? 'bg-neutral-800 text-white border-neutral-600' : 'bg-white text-slate-800 border-slate-300 shadow-sm')}`}>
-                    {msg.role === 'ai' ? 'AI' : (user ? user.email.charAt(0).toUpperCase() : 'U')}
-                  </div>
-                  
-                  <div className={`max-w-[85%] text-[15.5px] leading-relaxed markdown-container break-words border ${msg.role === 'user' ? `${theme.chatBoxBgUser} px-6 py-4 rounded-3xl rounded-tr-sm` : `${theme.chatBoxBgAI} ${theme.chatBoxBorder} ${isDarkMode ? 'bg-[#1c1c1c]/40' : 'bg-white/80'} backdrop-blur-2xl p-6 rounded-3xl rounded-tl-sm shadow-lg`}`}>
-                      {msg.text === '_thinking_' ? (
-                          <div className="flex gap-2 items-center h-6 animate-pulse">
-                              <div className={`w-2.5 h-2.5 rounded-full ${isDarkMode ? 'bg-white' : 'bg-slate-800'} animate-bounce`}></div>
-                              <div className={`w-2.5 h-2.5 rounded-full ${isDarkMode ? 'bg-white' : 'bg-slate-800'} animate-bounce delay-75`}></div>
-                              <div className={`w-2.5 h-2.5 rounded-full ${isDarkMode ? 'bg-white' : 'bg-slate-800'} animate-bounce delay-150`}></div>
-                          </div>
-                      ) : (
-                          <ReactMarkdown>{msg.text}</ReactMarkdown>
-                      )}
-                  </div>
+                <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${msg.role==='ai'? accent.bg : 'bg-neutral-600'}`}>{msg.role==='ai'?'AI':'U'}</div>
+                  <div className={`max-w-[85%] p-4 rounded-2xl text-[15px] ${msg.role==='user'?theme.chatBoxBgUser:'border border-white/5 bg-white/5'}`}><ReactMarkdown>{msg.text}</ReactMarkdown></div>
                 </div>
               ))}
+              {isTyping && <div className="text-[10px] italic opacity-50 animate-pulse">Advisor is typing...</div>}
             </div>
           </div>
 
-          {/* INPUT AREA (Pinned Absolute Bottom) */}
-          <div className={`absolute bottom-0 left-0 w-full px-6 pt-12 pb-6 bg-gradient-to-t ${theme.inputAreaGradient} to-transparent z-20`}>
-            <div className="max-w-4xl mx-auto relative group">
-              <div className={`${theme.inputWrapperBg} backdrop-blur-3xl rounded-3xl border ${theme.inputBorder} transition-all p-2 flex items-end shadow-2xl`}>
-                <textarea 
-                  ref={textareaRef}
-                  rows="1"
-                  className={`flex-1 bg-transparent ${theme.textPrimary} p-4 outline-none resize-none max-h-48 text-[15px] custom-scrollbar placeholder:${theme.textSecondary}`}
-                  placeholder="Message Elite AI..."
-                  value={input}
-                  onChange={(e) => {
-                     setInput(e.target.value);
-                     e.target.style.height = 'auto';
-                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                  }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                />
-                <button 
-                  onClick={handleSend}
-                  disabled={!input.trim() || isTyping}
-                  className={`p-4 rounded-2xl mb-1 mr-1 transition-all flex items-center justify-center ${input.trim() && !isTyping ? `${accent.bg} text-white shadow-lg hover:scale-105 active:scale-95` : `bg-transparent ${theme.textSecondary} cursor-not-allowed`}`}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
-              </div>
-              <p className={`text-center text-[11px] ${theme.textSecondary} mt-4 font-semibold tracking-[1px]`}>
-                AI can make mistakes. Verify important information.
-              </p>
+          <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-[#0a0a0a] to-transparent z-20">
+            <div className="max-w-3xl mx-auto flex items-end gap-2 bg-[#1c1c1c] p-2 rounded-2xl border border-white/10 shadow-2xl">
+              <textarea ref={textareaRef} rows="1" className="flex-1 bg-transparent p-3 outline-none resize-none max-h-32 text-sm" placeholder="Ask about property documents..." value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&(e.preventDefault(),handleSend())} />
+              <button onClick={handleSend} className={`p-3 rounded-xl ${accent.bg} text-white shadow-lg`}>Send</button>
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* ========================================== */}
-      {/* 🛑 AUTH MODAL (WITH LIVE PASSWORD VALIDATION) 🛑 */}
-      {/* ========================================== */}
-      {showAuthModal && !user && (
-         <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl z-[200] flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
-           <div className={`absolute top-[10%] left-[20%] w-[400px] h-[400px] ${theme.blurOrb1} rounded-full blur-[150px] pointer-events-none`}></div>
-           
-           <div className={`w-full max-w-md my-auto ${isDarkMode ? 'bg-[#111111]/95' : 'bg-white/95'} backdrop-blur-3xl p-8 sm:p-10 rounded-[2rem] border ${theme.sidebarBorder} shadow-2xl relative z-10 animate-slide-up`}>
-              <button onClick={() => setShowAuthModal(false)} className={`absolute top-6 right-6 ${theme.textSecondary} hover:${theme.textPrimary} transition ${theme.sidebarHover} p-2 rounded-full`}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-              
-              <div className={`w-16 h-16 ${isDarkMode ? 'bg-white/5' : 'bg-slate-100'} rounded-2xl flex items-center justify-center mx-auto mb-6 border ${theme.sidebarBorder} shadow-sm`}>
-                  <svg className={theme.textPrimary} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              </div>
-
-              <h2 className={`text-3xl font-extrabold mb-2 text-center tracking-tight ${theme.textPrimary}`}>Elite Access</h2>
-              <p className={`text-center mb-8 text-sm ${theme.textSecondary}`}>
-                {authMode === 'login' ? 'Welcome back! Sign in to continue.' : 
-                 authMode === 'signup' ? 'Create a secure account.' : 
-                 'Check your email for the verification code.'}
-              </p>
-
-              <form onSubmit={handleAuth} className="space-y-5">
-                  {authMode !== 'otp' && (
-                      <>
-                          <div>
-                              <label className={`text-[10px] ${theme.textSecondary} font-bold uppercase tracking-widest mb-2 block`}>Email Address</label>
-                              <input type="email" required className={`w-full ${theme.inputWrapperBg} border ${theme.sidebarBorder} rounded-xl p-4 outline-none focus:${accent.border} transition ${theme.textPrimary} shadow-inner`} value={email} onChange={(e) => setEmail(e.target.value)} />
-                          </div>
-                          
-                          <div className="relative">
-                              <label className={`text-[10px] ${theme.textSecondary} font-bold uppercase tracking-widest mb-2 block`}>Password</label>
-                              <input 
-                                  type={showPassword ? "text" : "password"} 
-                                  required 
-                                  className={`w-full ${theme.inputWrapperBg} border ${theme.sidebarBorder} rounded-xl p-4 pr-12 outline-none focus:${accent.border} transition ${theme.textPrimary} shadow-inner`} 
-                                  value={password} 
-                                  onChange={(e) => setPassword(e.target.value)} 
-                              />
-                              <button 
-                                  type="button" 
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  className={`absolute right-4 top-[38px] ${theme.textSecondary} hover:${theme.textPrimary} transition focus:outline-none`}
-                              >
-                                  {showPassword ? 
-                                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                                      : 
-                                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                  }
-                              </button>
-                          </div>
-                          
-                          {/* 🛡️ LIVE PASSWORD VALIDATION (Only visible in Signup) */}
-                          {authMode === 'signup' && (
-                              <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-slate-100 border-slate-300'} space-y-2 mt-2 transition-all`}>
-                                  <p className={`text-[10px] font-bold uppercase tracking-widest ${theme.textPrimary} mb-3`}>Password Requirements:</p>
-                                  <div className="flex items-center gap-2 text-xs font-medium">
-                                      {pwdReqs.length ? <span className="text-emerald-500 scale-110 transition-transform">✅</span> : <span className={theme.textSecondary}>⚪</span>}
-                                      <span className={pwdReqs.length ? theme.textPrimary : theme.textSecondary}>At least 8 characters</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs font-medium">
-                                      {pwdReqs.uppercase ? <span className="text-emerald-500 scale-110 transition-transform">✅</span> : <span className={theme.textSecondary}>⚪</span>}
-                                      <span className={pwdReqs.uppercase ? theme.textPrimary : theme.textSecondary}>One uppercase letter</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs font-medium">
-                                      {pwdReqs.number ? <span className="text-emerald-500 scale-110 transition-transform">✅</span> : <span className={theme.textSecondary}>⚪</span>}
-                                      <span className={pwdReqs.number ? theme.textPrimary : theme.textSecondary}>One number</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs font-medium">
-                                      {pwdReqs.special ? <span className="text-emerald-500 scale-110 transition-transform">✅</span> : <span className={theme.textSecondary}>⚪</span>}
-                                      <span className={pwdReqs.special ? theme.textPrimary : theme.textSecondary}>One special char (!@#$)</span>
-                                  </div>
-                              </div>
-                          )}
-                      </>
-                  )}
-
-                  {authMode === 'otp' && (
-                       <div>
-                          <label className={`text-[10px] ${theme.textSecondary} font-bold uppercase tracking-widest mb-2 block`}>Verification Code</label>
-                          <input type="text" required maxLength="6" className={`w-full ${theme.inputWrapperBg} border ${theme.sidebarBorder} rounded-xl p-4 outline-none focus:${accent.border} transition text-center tracking-[15px] text-2xl font-mono ${theme.textPrimary} shadow-inner`} value={otp} onChange={e => setOtp(e.target.value)} />
-                      </div>
-                  )}
-
-                  {authError && <p className="text-red-500 text-xs text-center font-bold bg-red-500/10 py-2.5 rounded-lg border border-red-500/20"><ReactMarkdown>{authError}</ReactMarkdown></p>}
-                  {authSuccess && <p className="text-emerald-500 text-xs text-center font-bold bg-emerald-500/10 py-2.5 rounded-lg border border-emerald-500/20">{authSuccess}</p>}
-
-                  <button 
-                      type="submit"
-                      disabled={authLoading || (authMode === 'signup' && !isPasswordValid)}
-                      className={`w-full ${accent.bg} text-white font-extrabold py-4 rounded-xl transition active:scale-95 mt-2 shadow-[0_0_20px_rgba(0,0,0,0.2)] hover:opacity-90 text-lg disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                      {authLoading ? 'Processing...' : (authMode === 'login' ? 'Secure Login' : authMode === 'signup' ? 'Create Account' : 'Verify & Continue')}
-                  </button>
-              </form>
-
-              <div className="mt-6 text-center text-xs font-medium">
-                  {authMode === 'login' ? (
-                      <p className={theme.textSecondary}>New here? <button onClick={() => {setAuthMode('signup'); setAuthError(''); setAuthSuccess(''); setPassword('');}} className={`${accent.text} hover:opacity-80 font-bold ml-1`}>Create an account</button></p>
-                  ) : authMode === 'signup' ? (
-                      <p className={theme.textSecondary}>Already registered? <button onClick={() => {setAuthMode('login'); setAuthError(''); setAuthSuccess(''); setPassword('');}} className={`${accent.text} hover:opacity-80 font-bold ml-1`}>Sign in</button></p>
-                  ) : (
-                      <p className={theme.textSecondary}>OTP is sent via secure SMTP. Check your inbox.</p>
-                  )}
-              </div>
-           </div>
-         </div>
-      )}
-
-      {/* 🛑 TEMP CHAT DISCLAIMER OVERLAY 🛑 */}
-      {showTempDisclaimer && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[100] flex items-center justify-center p-6 animate-fade-in">
-          <div className="absolute inset-0 bg-indigo-950/20 w-[400px] h-[400px] blur-[150px] mx-auto my-auto rounded-full pointer-events-none"></div>
-          <div className={`bg-[#111111]/90 backdrop-blur-lg border border-indigo-700/50 p-10 rounded-3xl max-w-lg text-center shadow-2xl relative z-10 border-indigo-900 border-4`}>
-            <div className="w-24 h-24 bg-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-8 border border-indigo-700/40 animate-pulse">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h3M19 12h3M12 2v3M12 19v3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
+            <div className="bg-[#111] p-8 rounded-3xl border border-white/10 w-full max-w-sm">
+                <h2 className="text-xl font-bold mb-6 text-center">{authMode.toUpperCase()}</h2>
+                <form onSubmit={handleAuth} className="space-y-4">
+                    <input type="email" placeholder="Email" className="w-full p-4 rounded-xl bg-white/5 border border-white/10" value={email} onChange={e=>setEmail(e.target.value)} required />
+                    {authMode !== 'otp' && <input type="password" placeholder="Password" className="w-full p-4 rounded-xl bg-white/5 border border-white/10" value={password} onChange={e=>setPassword(e.target.value)} required />}
+                    {authMode === 'otp' && <input type="text" placeholder="OTP" className="w-full p-4 rounded-xl bg-white/5 border border-white/10" value={otp} onChange={e=>setOtp(e.target.value)} required />}
+                    {authError && <p className="text-red-500 text-xs text-center">{authError}</p>}
+                    <button type="submit" disabled={authLoading} className="w-full p-4 rounded-xl bg-blue-600 font-bold">{authLoading ? '...' : 'Continue'}</button>
+                </form>
+                <button onClick={()=>setAuthMode(authMode==='login'?'signup':'login')} className="w-full mt-4 text-[10px] opacity-40">Switch Mode</button>
+                <button onClick={()=>setShowAuthModal(false)} className="w-full mt-2 text-[10px] opacity-40">Close</button>
             </div>
-            <h2 className="text-3xl font-extrabold mb-5 text-white tracking-tighter">Incognito Mode</h2>
-            <p className="text-indigo-200 text-md leading-relaxed mb-10 tracking-tight">
-              You are entering **Incognito Mode**. Messages will not be saved to history and will vanish when you leave.
-            </p>
-            <button onClick={() => setShowTempDisclaimer(false)} className="w-full bg-white hover:bg-neutral-200 text-black font-extrabold py-4 rounded-xl transition active:scale-95 shadow-xl text-lg">
-              I Understand
-            </button>
-          </div>
         </div>
       )}
-
     </>
   );
 }
