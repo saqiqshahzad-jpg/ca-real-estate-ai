@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
+import logoImg from './logo.png'; // 
 
 // --- 🎨 GLOBAL THEME & ACCENT CONFIG ---
 const accentColors = {
@@ -335,10 +334,19 @@ export default function App() {
         {/* ========================================== */}
         <div className={`w-[280px] sm:w-[320px] h-full flex-shrink-0 ${theme.sidebarBg} backdrop-blur-3xl flex flex-col border-r ${theme.sidebarBorder} z-20`}>
           
-          <div className="p-5 space-y-4 flex-shrink-0">
-            <h1 className={`text-xl font-extrabold tracking-tighter flex items-center gap-2 ${theme.textPrimary}`}>
-                CA Real Estate Advisor <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
-            </h1>
+          {/* --- SIDEBAR LOGO & NAME --- */}
+<div className="p-5 space-y-4 flex-shrink-0">
+  <div className="flex items-center gap-3">
+    {/ ./logo.png /}
+    <img src={logoImg} alt="CA Real Estate Advisor" className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" />
+    
+    <h1 className={`text-xl font-extrabold tracking-tighter ${theme.textPrimary}`}>
+       CA Real Estate Advisor <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
+    </h1>
+  </div>
+  
+  {/* New Conversation Button wahi rahega... */}
+</div>
             
             <button onClick={startNewChat} className={`w-full flex items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition active:scale-95 border ${theme.sidebarBorder} ${theme.sidebarHover} ${theme.textPrimary} shadow-sm`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
