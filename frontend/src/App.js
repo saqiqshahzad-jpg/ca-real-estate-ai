@@ -1,6 +1,7 @@
+/* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import logoImg from './logo.png'; // 🛑 UMAR BHAI FIX 1: Logo import lazmi hai
+import logoImg from './logo.png'; 
 
 // --- 🎨 GLOBAL THEME & ACCENT CONFIG ---
 const accentColors = {
@@ -9,7 +10,7 @@ const accentColors = {
   rose: { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', glow: 'bg-rose-500/20' },
 };
 
-// 🛑 UMAR BHAI FIX 2: API URL Live wala dalo, warna internet par AI nahi chalega!
+// 🛑 UMAR BHAI FIX: API URL Live wala dalo, warna AI nahi chalega!
 const API_URL = 'https://ca-estate-api.onrender.com'; 
 
 export default function App() {
@@ -260,7 +261,7 @@ export default function App() {
     } catch (e) {
       setMessages(prev => prev.map(m => m.id === aiMsgId ? { 
           role: 'ai', 
-          text: `⚠️ **Connection Failed:** Contact the Host.`, 
+          text: `⚠️ **Connection Failed:** Ensure backend is running.`, 
           id: aiMsgId 
       } : m));
     } finally {
@@ -337,18 +338,11 @@ export default function App() {
         <div className={`w-[280px] sm:w-[320px] h-full flex-shrink-0 ${theme.sidebarBg} backdrop-blur-3xl flex flex-col border-r ${theme.sidebarBorder} z-20`}>
           
           {/* --- SIDEBAR LOGO & NAME --- */}
-<div className="p-5 space-y-4 flex-shrink-0">
-  <div className="flex items-center gap-3">
-    {/* ./logo.png */}
-    <img src={logoImg} alt="CA Real Estate Advisor" className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" />
-    
-    <h1 className={`text-xl font-extrabold tracking-tighter ${theme.textPrimary}`}>
-       CA Real Estate Advisor <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
-    </h1>
-  </div>
-  
-  {/* New Conversation Button wahi rahega... */}
-</div>
+          <div className="p-5 space-y-4 flex-shrink-0">
+            <h1 className={`text-xl font-extrabold tracking-tighter flex items-center gap-2 ${theme.textPrimary}`}>
+               <img src={logoImg} alt="CA Real Estate Advisor" className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" />
+               Elite AI <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
+            </h1>
             
             <button onClick={startNewChat} className={`w-full flex items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition active:scale-95 border ${theme.sidebarBorder} ${theme.sidebarHover} ${theme.textPrimary} shadow-sm`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
@@ -407,7 +401,7 @@ export default function App() {
             ) : (
                 <div className={`flex flex-col items-center justify-center h-full opacity-50 px-4 text-center ${theme.textSecondary}`}>
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <p className="text-xs font-semibold">History disabled, Log in to save history</p>
+                    <p className="text-xs font-semibold">History disabled</p>
                 </div>
             )}
           </div>
@@ -442,7 +436,7 @@ export default function App() {
                   </div>
 
                   <button onClick={logout} className={`w-full text-left p-3.5 hover:bg-red-500/10 text-red-500 rounded-xl text-sm transition font-bold flex items-center gap-3 border border-transparent hover:border-red-500/20`}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5m14 0-4 4m4-4-4-4"/></svg> Logout
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5m14 0-4 4m4-4-4-4"/></svg> Secure Logout
                   </button>
                 </div>
               </div>
@@ -459,7 +453,7 @@ export default function App() {
             ) : (
                <div className="text-center w-full">
                   <button onClick={() => {setAuthMode('login'); setShowAuthModal(true);}} className={`w-full ${isDarkMode ? 'bg-white text-black' : 'bg-slate-900 text-white'} font-extrabold py-3.5 rounded-xl text-sm hover:opacity-80 transition active:scale-95 shadow-md`}>
-                      Sign In / Sign Up
+                      Sign In to Elite AI
                   </button>
                </div>
             )}
@@ -475,7 +469,7 @@ export default function App() {
           <header className={`absolute top-0 left-0 w-full h-16 border-b ${theme.sidebarBorder} flex items-center justify-between px-8 ${theme.headerBg} backdrop-blur-xl z-30`}>
             <div className="flex items-center gap-3">
               <span className={`text-sm font-extrabold tracking-widest uppercase flex items-center gap-3 ${theme.textPrimary}`}>
-                 California Real Estate Advisor
+                 Elite AI Workspace
                  <span className={`w-2.5 h-2.5 rounded-full ${accent.bg} animate-pulse ${accent.shadow}`}></span>
               </span>
             </div>
@@ -549,7 +543,7 @@ export default function App() {
                 </button>
               </div>
               <p className={`text-center text-[11px] ${theme.textSecondary} mt-4 font-semibold tracking-[1px]`}>
-                AI can make mistakes. Verify important information.
+                AI can make mistakes. Verify important information with documents.
               </p>
             </div>
           </div>
@@ -660,7 +654,7 @@ export default function App() {
                   ) : authMode === 'signup' ? (
                       <p className={theme.textSecondary}>Already registered? <button onClick={() => {setAuthMode('login'); setAuthError(''); setAuthSuccess(''); setPassword('');}} className={`${accent.text} hover:opacity-80 font-bold ml-1`}>Sign in</button></p>
                   ) : (
-                      <p className={theme.textSecondary}>OTP is sent via secure SMTP. Check your inbox.</p>
+                      <p className={theme.textSecondary}>OTP is sent via secure SMTP. Check spam if not found.</p>
                   )}
               </div>
            </div>
@@ -677,7 +671,7 @@ export default function App() {
             </div>
             <h2 className="text-3xl font-extrabold mb-5 text-white tracking-tighter">Incognito Mode</h2>
             <p className="text-indigo-200 text-md leading-relaxed mb-10 tracking-tight">
-              You are entering **Incognito Mode**. Messages will not be saved to history and will vanish when you leave.
+              Alaaudin Bro, you are entering **Incognito Mode**. Messages will not be saved to history and will vanish when you leave.
             </p>
             <button onClick={() => setShowTempDisclaimer(false)} className="w-full bg-white hover:bg-neutral-200 text-black font-extrabold py-4 rounded-xl transition active:scale-95 shadow-xl text-lg">
               I Understand
