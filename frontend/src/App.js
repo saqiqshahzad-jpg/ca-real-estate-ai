@@ -8,7 +8,8 @@ const accentColors = {
   rose: { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', glow: 'bg-rose-500/20' },
 };
 
-const API_URL = 'http://127.0.0.1:8000'; 
+// 🛑 UMAR BHAI FIX: Ab yahan apna asli live link dalo
+const API_URL = 'https://ca-estate-api.onrender.com'; 
 
 export default function App() {
   // --- 🧠 AUTH STATES ---
