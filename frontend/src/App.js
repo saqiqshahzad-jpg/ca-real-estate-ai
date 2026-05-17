@@ -314,7 +314,32 @@ export default function App() {
             top: 0; left: 0;
             background-color: ${isDarkMode ? '#0a0a0a' : '#eef2f6'};
         }
-        
+        <style dangerouslySetInnerHTML={{__html: `
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  /* 🎨 DYNAMIC TEXT SELECTION FIX */
+  ::selection {
+    background: ${isDarkMode ? '#FBFAF5' : '#292929'};
+    color: ${isDarkMode ? '#292929' : '#FBFAF5'};
+  }
+  /* For Firefox */
+  ::-moz-selection {
+    background: ${isDarkMode ? '#FBFAF5' : '#292929'};
+    color: ${isDarkMode ? '#292929' : '#FBFAF5'};
+  }
+
+  html, body, #root { 
+      width: 100vw !important; 
+      height: 100dvh !important; 
+      overflow: hidden !important; 
+      position: fixed !important; 
+      top: 0; left: 0;
+      background-color: ${isDarkMode ? '#0a0a0a' : '#eef2f6'};
+  }
+  
+  /* ... baqi saara purana CSS yahan rahega ... */
+`}} />
+
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -351,7 +376,7 @@ export default function App() {
             <div className="flex items-center justify-between">
               <h1 className={`text-xl font-extrabold tracking-tighter flex items-center gap-2 ${theme.textPrimary}`}>
                  <img src={logoImg} alt="CA Real Estate Advisor" className="w-12 h-12 rounded-xl object-cover shadow-lg border border-white/10" />
-                 Elite AI <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
+                 CA Real Estate Advisor <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-md text-white shadow-md ${accent.bg}`}>v3.0</span>
               </h1>
               <button onClick={() => setIsSidebarOpen(false)} className="md:hidden opacity-50 p-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>

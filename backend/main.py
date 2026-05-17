@@ -24,9 +24,26 @@ app.add_middleware(
 # 🛑 ALAAUDIN BRO: Apni Groq Key yahan dalo
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# --- 📧 EMAIL CONFIGURATION ---
-SENDER_EMAIL = "spidermanbona@gmail.com" 
-APP_PASSWORD = os.environ.get("EMAIL_PASSWORD")
+import os
+import smtplib
+from email.mime.text import MIMEText
+
+def send_otp_email(user_ki_email, otp_code):
+    # Render ke variables yahan se uthaye ga
+    msg = MIMEText(f"Hello! Here's your CA Advisor OTP: {otp_code}")
+    msg['Subject'] = "Verification Code"
+    msg['From'] = os.environ.get("SMTP_USER")
+    msg['To'] = user_ki_email # 👈 Is se OTP usay jayega jo signup kar raha hai!
+
+    try:
+        with smtplib.SMTP(os.environ.get("SMTP_HOST"), int(os.environ.get("SMTP_PORT"))) as server:
+            server.starttls()
+            server.login(os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASSWORD"))
+            server.sendmail(msg['From'], [msg['To']], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Bhai masla aa gaya: {e}")
+        return False
 
 # --- 🗄️ DATABASE SETUP ---
 DB_FILE = "users.json"
