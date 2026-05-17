@@ -306,6 +306,18 @@ export default function App() {
       {/* 🛑 UMAR BHAI'S ABSOLUTE LOCK CSS 🛑 */}
       <style dangerouslySetInnerHTML={{__html: `
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* 🎨 DYNAMIC TEXT SELECTION FIX */
+        ::selection {
+          background: ${isDarkMode ? '#FBFAF5' : '#292929'};
+          color: ${isDarkMode ? '#292929' : '#FBFAF5'};
+        }
+        /* For Firefox */
+        ::-moz-selection {
+          background: ${isDarkMode ? '#FBFAF5' : '#292929'};
+          color: ${isDarkMode ? '#292929' : '#FBFAF5'};
+        }
+
         html, body, #root { 
             width: 100vw !important; 
             height: 100dvh !important; 
@@ -314,31 +326,22 @@ export default function App() {
             top: 0; left: 0;
             background-color: ${isDarkMode ? '#0a0a0a' : '#eef2f6'};
         }
-        <style dangerouslySetInnerHTML={{__html: `
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  
-  /* 🎨 DYNAMIC TEXT SELECTION FIX */
-  ::selection {
-    background: ${isDarkMode ? '#FBFAF5' : '#292929'};
-    color: ${isDarkMode ? '#292929' : '#FBFAF5'};
-  }
-  /* For Firefox */
-  ::-moz-selection {
-    background: ${isDarkMode ? '#FBFAF5' : '#292929'};
-    color: ${isDarkMode ? '#292929' : '#FBFAF5'};
-  }
 
-  html, body, #root { 
-      width: 100vw !important; 
-      height: 100dvh !important; 
-      overflow: hidden !important; 
-      position: fixed !important; 
-      top: 0; left: 0;
-      background-color: ${isDarkMode ? '#0a0a0a' : '#eef2f6'};
-  }
-  
-  /* ... baqi saara purana CSS yahan rahega ... */
-`}} />
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .markdown-container strong { font-weight: 800; color: inherit; }
+        .markdown-container p { margin-bottom: 14px; }
+        .markdown-container ul { list-style-type: disc; margin-left: 20px; margin-bottom: 14px; }
+        .markdown-container li { margin-bottom: 6px; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px;}
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #666; }
+      `}} />
 
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
@@ -708,7 +711,7 @@ export default function App() {
             </div>
             <h2 className="text-2xl md:text-3xl font-extrabold mb-3 md:mb-5 text-white tracking-tighter">Incognito Mode</h2>
             <p className="text-indigo-200 text-sm md:text-md leading-relaxed mb-8 md:mb-10 tracking-tight">
-              Alaaudin Bro, you are entering **Incognito Mode**. Messages will not be saved to history and will vanish when you leave.
+              You are entering **Incognito Mode**. Messages will not be saved to history and will vanish when you leave.
             </p>
             <button onClick={() => setShowTempDisclaimer(false)} className="w-full bg-white hover:bg-neutral-200 text-black font-extrabold py-3 md:py-4 rounded-xl transition active:scale-95 shadow-xl text-sm md:text-lg">
               I Understand
