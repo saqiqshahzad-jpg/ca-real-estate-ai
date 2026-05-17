@@ -303,15 +303,16 @@ def send_otp_email(receiver_email, otp_code):
     try:
         # 📧 Elite Transactional Email Format
         params = {
-            "from": "onboarding@resend.dev", # 👈 Shuru mein yehi dalo, baad mein domain connect karenge
-            "to": receiver_email, # 👈 User ki email jo signup modal mein thi
-            "subject": "Hello! Here's Your Access Key",
+            "from": "CA Real Estate Advisor <support@carealestateadvisor.online>", # 👈 Ab ye tumhari apni domain hai!
+            "to": receiver_email,
+            "subject": "Elite Access Key - CA Real Estate Advisor",
             "html": f"""
-                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
-                    <h2 style="color: #292929;">Welcome to the Inner Circle!</h2>
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 15px;">
+                    <h2 style="color: #292929;">Welcome to the Elite Circle!</h2>
                     <p>Your secure verification code is:</p>
-                    <h1 style="color: #007bff; letter-spacing: 5px;">{otp_code}</h1>
-                    <p style="font-size: 12px; color: #888;">If you didn't request this, just ignore it :).</p>
+                    <h1 style="color: #007bff; letter-spacing: 5px; font-size: 32px;">{otp_code}</h1>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #888;">This is an automated security key from your AI Advisor. If you didn't request this, ignore it Bro.</p>
                 </div>
             """
         }
