@@ -312,7 +312,6 @@ export default function App() {
           background: ${isDarkMode ? '#FBFAF5' : '#292929'};
           color: ${isDarkMode ? '#292929' : '#FBFAF5'};
         }
-        /* For Firefox */
         ::-moz-selection {
           background: ${isDarkMode ? '#FBFAF5' : '#292929'};
           color: ${isDarkMode ? '#292929' : '#FBFAF5'};
@@ -343,21 +342,7 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #666; }
       `}} />
 
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        
-        .markdown-container strong { font-weight: 800; color: inherit; }
-        .markdown-container p { margin-bottom: 14px; }
-        .markdown-container ul { list-style-type: disc; margin-left: 20px; margin-bottom: 14px; }
-        .markdown-container li { margin-bottom: 6px; }
-        
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px;}
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #666; }
-      `}} />
+      {/* 🛑 THE MASTER CONTAINER 🛑 */}
 
       {/* 🛑 THE MASTER CONTAINER 🛑 */}
       <div className={`absolute inset-0 flex overflow-hidden ${theme.textPrimary} transition-colors duration-500 font-sans`}>
