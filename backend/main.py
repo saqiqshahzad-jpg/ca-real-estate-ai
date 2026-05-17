@@ -305,7 +305,7 @@ def send_otp_email(receiver_email, otp_code):
         params = {
             "from": "CA Real Estate Advisor <support@carealestateadvisor.online>", # 👈 Ab ye tumhari apni domain hai!
             "to": receiver_email,
-            "subject": "Elite Access Key - CA Real Estate Advisor",
+            "subject": "Your Verification Code - CA Real Estate Advisor",
             "html": f"""
                 <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 15px;">
                     <h2 style="color: #292929;">Welcome to the Elite Circle!</h2>
