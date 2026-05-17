@@ -294,29 +294,31 @@ class VerifyRequest(BaseModel):
     otp: str
 
 # --- 🛠️ HELPER: Send OTP Email ---
+import resend
+import os
+
+resend.api_key = os.environ.get("RESEND_API_KEY")
+
 def send_otp_email(receiver_email, otp_code):
     try:
-        # Render se variables uthao taake error na aaye
-        SENDER_EMAIL = os.environ.get("SMTP_USER")
-        APP_PASSWORD = os.environ.get("SMTP_PASSWORD")
-
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL # 👈 Ab ye defined hai!
-        msg['To'] = receiver_email
-        msg['Subject'] = "CA Real Estate AI - Verify Your Account"
-
-        body = f"Hello!\n\nWelcome to CA Real Estate AI. Your secure verification code is: {otp_code}\n\nDo not share this code."
-        msg.attach(MIMEText(body, 'plain'))
-
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        # Render ke variables use karke login karo
-        server.login(SENDER_EMAIL, APP_PASSWORD) # 👈 Ab ye bhi defined hai!
-        server.send_message(msg)
-        server.quit()
+        # 📧 Elite Transactional Email Format
+        params = {
+            "from": "onboarding@resend.dev", # 👈 Shuru mein yehi dalo, baad mein domain connect karenge
+            "to": receiver_email, # 👈 User ki email jo signup modal mein thi
+            "subject": "Hello! Here's Your Access Key",
+            "html": f"""
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
+                    <h2 style="color: #292929;">Welcome to the Inner Circle!</h2>
+                    <p>Your secure verification code is:</p>
+                    <h1 style="color: #007bff; letter-spacing: 5px;">{otp_code}</h1>
+                    <p style="font-size: 12px; color: #888;">If you didn't request this, just ignore it :).</p>
+                </div>
+            """
+        }
+        resend.Emails.send(params)
         return True
     except Exception as e:
-        print(f"Email Error: {e}")
+        print(f"Resend Error: {e}")
         return False
 
 # --- 🚀 API ROUTES ---
