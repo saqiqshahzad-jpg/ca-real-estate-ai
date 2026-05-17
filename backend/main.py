@@ -296,17 +296,22 @@ class VerifyRequest(BaseModel):
 # --- 🛠️ HELPER: Send OTP Email ---
 def send_otp_email(receiver_email, otp_code):
     try:
+        # Render se variables uthao taake error na aaye
+        SENDER_EMAIL = os.environ.get("SMTP_USER")
+        APP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+
         msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
+        msg['From'] = SENDER_EMAIL # 👈 Ab ye defined hai!
         msg['To'] = receiver_email
         msg['Subject'] = "CA Real Estate AI - Verify Your Account"
 
-        body = f"Hello!\n\nWelcome to CA Real Estate AI. Your secure verification code is: {otp_code}\n\nDo not share this code with anyone."
+        body = f"Hello!\n\nWelcome to CA Real Estate AI. Your secure verification code is: {otp_code}\n\nDo not share this code."
         msg.attach(MIMEText(body, 'plain'))
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(SENDER_EMAIL, APP_PASSWORD)
+        # Render ke variables use karke login karo
+        server.login(SENDER_EMAIL, APP_PASSWORD) # 👈 Ab ye bhi defined hai!
         server.send_message(msg)
         server.quit()
         return True
