@@ -307,30 +307,23 @@ Strictly adhere to the following guardrails:
         
         ai_response = completion.choices[0].message.content
         
-        # 📅 MAKE.COM INTEGRATION (Masla Hal Logic)
-        # Hum sirf tabhi "Scheduled" dikhayenge jab AI ne tag diya ho aur requests successful ho!
+        # 📅 MAKE.COM INTEGRATION (Elite Automation)
         if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
             try:
-                # Tag se data nikaalna
                 tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
                 booking_parts = tag_content.split(",")
                 
                 name_val = booking_parts[0].strip()
                 time_val = booking_parts[1].strip()
 
-                # Make.com ko data bhejna
                 requests.post(MAKE_WEBHOOK_URL, json={
                     "email": data.email,
                     "name": name_val,
                     "time": time_val
                 })
                 
-                # Tag ko mita kar "Scheduled" wala hara nishaan lagana
-                clean_response = ai_response.split("[BOOKING:")[0].strip()
-                ai_response = clean_response + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
-            except Exception as e:
-                print(f"Booking Error: {e}")
-                # Agar koi error aaye toh tag mita do taake ghalat message na jaye
+                ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
+            except Exception:
                 ai_response = ai_response.split("[BOOKING:")[0].strip()
 
         return {"response": ai_response}
