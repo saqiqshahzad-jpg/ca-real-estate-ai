@@ -8,18 +8,16 @@ from pydantic import BaseModel
 from groq import Groq
 import resend
 
-# 1️⃣ APP SETUP & CONFIG (Sab se pehle)
+# 1️⃣ SETUP & CONFIG
 app = FastAPI()
 
-# Render/Environment Variables
+# Render se Variables uthana
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-PDF_CONTEXT = "Yahan apna poora PDF text dalo ya variable define karo" 
 
 client = Groq(api_key=GROQ_API_KEY)
 resend.api_key = RESEND_API_KEY
 
-# CORS Middleware (Sirf aik baar kafi hai)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,23 +40,38 @@ def save_db(data):
     with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# 3️⃣ EMAIL HELPER (Routes se upar)
+# 3️⃣ EMAIL HELPERS (OTP & Booking)
+def send_otp_email(email, otp):
+    html_template = f"""
+    <div style="font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 20px; overflow: hidden; text-align: center; padding: 20px;">
+        <h1 style="color: #10b981;">CA Real Estate Advisor</h1>
+        <h2>Verify Your Account</h2>
+        <div style="background: #f4f4f4; padding: 20px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">{otp}</div>
+    </div>
+    """
+    try:
+        res = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                "from": "no-reply@carealestateadvisor.online",
+                "to": email,
+                "subject": "🔐 CA Real Estate Advisor | Security Code",
+                "html": html_template
+            }
+        )
+        return res.status_code == 200
+    except: return False
+
 def send_booking_email(user_name, user_email, meeting_time):
     clean_time = meeting_time.replace("-", "").replace(" ", "T").replace(":", "") + "00Z"
     cal_link = f"https://www.google.com/calendar/render?action=TEMPLATE&text=Meeting+with+CA+Real+Estate+Advisor&dates={clean_time}/{clean_time}"
-
+    
     html_booking = f"""
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;">
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Meeting Confirmed! 🏠</h1>
-        </div>
-        <div style="padding: 40px; background: white;">
-            <h2 style="color: #1e293b;">Hello {user_name},</h2>
-            <p style="color: #475569;">Your consultation has been scheduled for <strong>{meeting_time}</strong>.</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{cal_link}" style="background: #10b981; color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold;">Add to My Calendar</a>
-            </div>
-        </div>
+    <div style="font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 20px; overflow: hidden; padding: 20px;">
+        <h1 style="color: #10b981;">Meeting Confirmed! 🏠</h1>
+        <p>Hello {user_name}, your consultation is scheduled for {meeting_time}.</p>
+        <a href="{cal_link}" style="background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 10px;">Add to Calendar</a>
     </div>
     """
     try:
@@ -73,48 +86,24 @@ def send_booking_email(user_name, user_email, meeting_time):
             }
         )
         return True
-    except Exception:
-        return False
+    except: return False
 
 # 4️⃣ MODELS
 class ChatMessage(BaseModel):
     message: str
     email: str
 
-# 5️⃣ API ROUTES (Sab se neechay)
-@app.post("/chat")
-def chat(data: ChatMessage):
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            temperature=0.2,
-            messages=[
-                {
-                    "role": "system", 
-                    "content": f"You are a professional California Real Estate Advisor. DOCUMENT CONTEXT: {PDF_CONTEXT}. If user provides Name, Email, and Time, output: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]"
-                },
-                {"role": "user", "content": data.message},
-            ],
-        )
+class AuthRequest(BaseModel):
+    email: str
+    password: str
 
-        ai_response = completion.choices[0].message.content
-        
-        if "[BOOKING:" in ai_response:
-            try:
-                tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
-                details = [d.strip() for d in tag_content.split(",")]
-                if len(details) >= 3:
-                    send_booking_email(details[0], details[2], details[1])
-                    ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
-            except Exception:
-                pass
+class VerifyRequest(BaseModel):
+    email: str
+    otp: str
 
-        return {"response": ai_response}
-    except Exception as e:
-        return {"response": f"System Error: {str(e)}"}
-# --- 📄 PDF CONTEXT ---
+# 5️⃣ PDF CONTEXT
 PDF_CONTEXT = """
-[HOT NOTES
+(HOT NOTES
 
 
 
@@ -329,61 +318,54 @@ Hot Notes	9
 15. The most often used method for land or site valuation is sales comparison.
 16. Economic rent refers to the going market rate for rent of a given unit and is used for the appraisal of income property.
 17. Contract rent refers to the actual lease amount of a unit and could be above or below market rate (economic rent).
-18. The average economic life of a residence is 40 years.
-]
+18. The average economic life of a residence is 40 years.)
 """
 
-class ChatMessage(BaseModel):
-    message: str
-    email: str 
-
-class AuthRequest(BaseModel):
-    email: str
-    password: str
-
-class VerifyRequest(BaseModel):
-    email: str
-    otp: str
-
-# --- 🚀 API ROUTES ---
-
+# 6️⃣ ROUTES
 @app.get("/")
 def home():
     return {"status": "CA Advisor Server is Running Online! ✅"}
 
-# --- CHAT ROUTE UPDATE ---
-"role": "system", 
-"content": f"""You are a professional California Real Estate Advisor only answer using DOCUMENT_CONTEXT , IF USER ASK ANYTHING NON-RELATED TO CALIFORNIA REAL ESTATE JUST APOLOGIZE IN KIND WAY WITH EMOJI. DO NOT ANSWER ANY QUESTION WHICH IS NOT-RELATED TO CALIFORNIA REAL ESTATE. 
+@app.post("/chat")
+def chat(data: ChatMessage):
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            temperature=0.1,
+            messages=[
+                {
+                    "role": "system", 
+                    "content": f"""You are a professional California Real Estate Advisor. 
+Answer ONLY using DOCUMENT_CONTEXT. If unrelated, apologize kindly with 🌏.
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
 MANDATORY BOOKING RULES:
-1. When you have Name, Email, and Time, you MUST output the booking tag.
-2. The tag MUST be enclosed in SQUARE BRACKETS. 
-3. EXACT FORMAT: [BOOKING: Full Name, YYYY-MM-DD HH:mm, Email]
-4. CRITICAL: If you do not use '[' and ']', the system will fail. 
-5. NEVER say 'this is a simulated system' or 'demonstration purposes'. Act as a REAL booking agent.
+1. When you have Name, Email, and Time, you MUST output: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
+2. Use SQUARE BRACKETS. 
+3. Act as a REAL agent. NEVER say 'simulated' or 'demonstration'."""
+                },
+                {"role": "user", "content": data.message},
+            ],
+        )
 
-EXAMPLE RESPONSE:
-'Perfect! I have scheduled your meeting. [BOOKING: Muhammad Saad, 2026-05-19 15:00, saqiqshahzad@gmail.com]' """
-
-# 📅 BACKEND LOGIC (Brackets ke bagair bhi pakarne ki koshish)
         ai_response = completion.choices[0].message.content
         
-        # Check for both formats: with brackets or just the word BOOKING
-        if "[BOOKING:" in ai_response or "BOOKING:" in ai_response:
+        # 📅 BACKEND LOGIC (Smart Detection)
+        trigger = "BOOKING:"
+        if trigger in ai_response:
             try:
-                # Agar bracket hai toh wahan se kato, warna "BOOKING:" se
-                split_word = "[BOOKING:" if "[BOOKING:" in ai_response else "BOOKING:"
-                tag_content = ai_response.split(split_word)[1].split("]")[0] if "]" in ai_response else ai_response.split(split_word)[1]
-                
-                details = [d.strip() for d in tag_content.split(",")]
+                # Cleaning the tag even if brackets are missing
+                tag_part = ai_response.split(trigger)[1].replace("[", "").replace("]", "").strip()
+                details = [d.strip() for d in tag_part.split(",")]
                 
                 if len(details) >= 3:
                     send_booking_email(details[0], details[2], details[1])
-                    ai_response = ai_response.split(split_word)[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
-            except Exception:
-                pass
-# --- 🔐 AUTH ROUTES ---
+                    ai_response = ai_response.split(trigger)[0].replace("[", "").strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
+            except: pass
+
+        return {"response": ai_response}
+    except Exception as e:
+        return {"response": f"Error: {str(e)}"}
 
 @app.post("/signup")
 def signup(data: AuthRequest):
@@ -395,42 +377,6 @@ def signup(data: AuthRequest):
     if send_otp_email(data.email, otp):
         return {"message": "OTP sent"}
     raise HTTPException(status_code=500, detail="Failed to send OTP.")
-
-@app.post("/send-otp")
-def send_otp_email(email, otp):
-    # CSS aur HTML ko alag rakhna behtar hai taake brackets clash na karein
-    html_template = f"""
-    <div style="font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 20px; overflow: hidden;">
-        <div style="background: #10b981; padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">CA Real Estate Advisor</h1>
-        </div>
-        <div style="padding: 30px; text-align: center;">
-            <h2 style="color: #333;">Verify Your Account</h2>
-            <p style="color: #666;">Welcome! Use the secure code below to complete your setup.</p>
-            <div style="background: #f4f4f4; border-radius: 10px; padding: 20px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #064e3b;">{otp}</span>
-            </div>
-            <p style="font-size: 12px; color: #999;">This code is valid for 10 minutes.</p>
-        </div>
-    </div>
-    """
-
-    try:
-        # 🚨 Dhiyaan se: Headers aur JSON mein single curly braces hi aayenge!
-        res = requests.post(
-            "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {os.getenv('RESEND_API_KEY')}"},
-            json={
-                "from": "no-reply@carealestateadvisor.online",
-                "to": email,
-                "subject": "🔐 CA Real Estate Advisor | Security Code",
-                "html": html_template
-            }
-        )
-        return res.status_code == 200
-    except Exception as e:
-        print(f"Email Error: {e}")
-        return False
 
 @app.post("/verify-otp")
 def verify_otp(data: VerifyRequest):
