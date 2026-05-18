@@ -290,18 +290,17 @@ def chat(data: ChatMessage):
                     "content": f"""You are a professional California Real Estate Advisor.
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
-BOOKING FLOW (Follow strictly):
-1. First, provide a helpful answer to the user's question.
-2. After answering, if you haven't offered yet, ask: 'Would you like to book a free call with our Licensed Expert?'
-3. If the user wants to book but hasn't provided Name/Time, ASK for them.
-4. AS SOON AS you have the Name and Date/Time (check chat history), STOP asking questions and output ONLY the confirmation text with the tag.
-   FORMAT: [BOOKING: Name, YYYY-MM-DD HH:mm]
-   Example: 'Great! I am booking that for you now. [BOOKING: Muhammad Saqib, 2026-05-18 19:00]'
+BOOKING FLOW:
+1. Help the user with their questions first.
+2. To book a meeting, you MUST explicitly ask for: Full Name, Email Address, and Date/Time.
+3. ONLY when you have ALL THREE (Name, Email, Time), output the tag:
+   FORMAT: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
+   Example: 'I've got all details. Booking it now! [BOOKING: Saqib Raza, 2026-05-20 15:00, saqib@example.com]'
 
 GUARDS:
-- NEVER include the [BOOKING:] tag if you are still asking for Name or Time.
-- ALWAYS use YYYY-MM-DD HH:mm format inside the tag.
-- Answer ONLY California Real Estate questions."""
+- Do NOT use 'guest'. Always ask the user for their email.
+- Date format must be YYYY-MM-DD HH:mm inside the tag.
+- Be polite and professional."""
                 },
                 {"role": "user", "content": data.message},
             ],
@@ -309,35 +308,31 @@ GUARDS:
 
         ai_response = completion.choices[0].message.content
         
-        # 📅 MAKE.COM INTEGRATION (Elite Automation)
+        # 📅 MAKE.COM INTEGRATION (Elite Fix)
         if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
             try:
-                # Tag se data nikaalna
                 parts = ai_response.split("[BOOKING:")
                 clean_text = parts[0].strip()
                 tag_content = parts[1].split("]")[0]
-                booking_parts = tag_content.split(",")
                 
-                name_val = booking_parts[0].strip()
-                time_val = booking_parts[1].strip()
-
-                # Sirf tabhi bhejenge jab data waqai sense bana raha ho
-                if len(name_val) > 2 and len(time_val) > 8:
+                # Naya format parse kar rahe hain (Name, Time, Email)
+                booking_data = [item.strip() for item in tag_content.split(",")]
+                
+                if len(booking_data) >= 3:
                     import requests
                     requests.post(MAKE_WEBHOOK_URL, json={
-                        "email": data.email,
-                        "name": name_val,
-                        "time": time_val
+                        "name": booking_data[0],
+                        "time": booking_data[1],
+                        "email": booking_data[2] # 👈 User se li hui asli email!
                     })
                     ai_response = clean_text + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
                 else:
-                    # Agar AI ne khali tag diya toh sirf text dikhao, Scheduled message nahi
+                    # Agar data adhoora hai toh tag mita do
                     ai_response = clean_text
             except Exception:
                 ai_response = ai_response.split("[BOOKING:")[0].strip()
 
         return {"response": ai_response}
-
     except Exception as e:
         return {"response": f"System Error: {str(e)}"}
 # --- 🔐 AUTH ROUTES ---
