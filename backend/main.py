@@ -326,31 +326,38 @@ Hot Notes	9
 def home():
     return {"status": "CA Advisor Server is Running Online! ✅"}
 
+from fastapi.responses import StreamingResponse # 👈 Ye import sab se upar dalo
+
 @app.post("/chat")
-def chat(data: ChatMessage):
+async def chat(data: ChatMessage): # 'async' dalo yahan
     try:
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            temperature=0.1,
-            messages=[
-                {
-                    "role": "system", 
-"content": f"""You are a professional California Real Estate Advisor. 
-Answer ONLY using DOCUMENT_CONTEXT. If unrelated, just apologize.
-DOCUMENT CONTEXT: {PDF_CONTEXT}
+        # 🏎️ STREAMING ENABLED (Super Fast Speed)
+        def generate_response():
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                temperature=0, # 👈 0 matlab bilkul robotic accuracy, koi hoshiyari nahi
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": f"""STRICT ROLE: You are a California Real Estate Advisor.
+1. ONLY answer questions from the DOCUMENT CONTEXT below.
+2. If the question is NOT about California Real Estate (e.g., cars, bikes, jet, life advice), say: "🌏 Apologies, I only provide guidance on California Real Estate. How can I help with your property search?"
+3. DO NOT give any general advice outside the context.
+4. BOOKING: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
 
-STRICT BOOKING PROTOCOL:
-1. NEVER output the [BOOKING:] tag unless the user has ALREADY provided their Name, Email, and Time in the chat.
-2. If info is missing, ASK for it. DO NOT make up fake data.
-3. Once (and ONLY once) you have all 3 real details, output: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
-4. Act like a real person, not a demo."""
-                },
-                {"role": "user", "content": data.message},
-            ],
-        )
+DOCUMENT CONTEXT: {PDF_CONTEXT}"""
+                    },
+                    {"role": "user", "content": data.message},
+                ],
+                stream=True # 👈 Is se bot foran bolna shuru kar dega
+            )
 
-        # 🚨 ALAAUDIN BRO! YAHAN SE LE KAR NEECHAY TAK KI LINES TUNE GHAIB KAR DI THIN! 👇
-        ai_response = completion.choices[0].message.content
+            full_content = ""
+            for chunk in response:
+                if chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    full_content += content
+                    yield content # Frontend ko sath sath data bhejna
         
        # 📅 BACKEND LOGIC (The "Anti-Hallucination" Lock)
         ai_response = completion.choices[0].message.content
