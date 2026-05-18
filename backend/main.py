@@ -281,6 +281,7 @@ def home():
 @app.post("/chat")
 def chat(data: ChatMessage):
     try:
+        # 🤖 AI Completion Call
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             temperature=0.2,
@@ -303,10 +304,11 @@ Strictly adhere to the following guardrails:
                 },
                 {"role": "user", "content": data.message},
             ],
-        
+        ) # 👈 Yeh bracket missing tha tumhare code mein!
+
         ai_response = completion.choices[0].message.content
         
-        # 📅 MAKE.COM INTEGRATION (Elite Automation)
+        # 📅 MAKE.COM INTEGRATION (Automation Logic)
         if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
             try:
                 tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
@@ -315,12 +317,14 @@ Strictly adhere to the following guardrails:
                 name_val = booking_parts[0].strip()
                 time_val = booking_parts[1].strip()
 
+                # Make.com ko data bhej rahe hain
                 requests.post(MAKE_WEBHOOK_URL, json={
                     "email": data.email,
                     "name": name_val,
                     "time": time_val
                 })
                 
+                # Response saaf kar ke success message dikhana
                 ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
             except Exception:
                 ai_response = ai_response.split("[BOOKING:")[0].strip()
@@ -329,27 +333,9 @@ Strictly adhere to the following guardrails:
 
     except Exception as e:
         return {"response": f"System Error: {str(e)}"}
-        
-        
-        ai_response = completion.choices[0].message.content
-        
-        # 📅 MAKE.COM INTEGRATION (The Booking Logic)
-        if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
-            try:
-                booking_data = ai_response.split("[BOOKING:")[1].split("]")[0].split(",")
-                import requests # 👈 Make sure requests is here
-                requests.post(MAKE_WEBHOOK_URL, json={
-                    "email": data.email,
-                    "name": booking_data[0].strip(),
-                    "time": booking_data[1].strip()
-                })
-                ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar.**"
-            except Exception:
-                pass
 
-        return {"response": ai_response}
-    except Exception as e:
-        return {"response": f"System Error: {str(e)}"}
+# --- 🔐 AUTH ROUTES ---
+
 @app.post("/signup")
 def signup(data: AuthRequest):
     db = load_db()
@@ -357,21 +343,25 @@ def signup(data: AuthRequest):
     db["otps"][data.email] = otp
     db["users"][data.email] = { "password": data.password, "verified": False }
     save_db(db)
-    # OTP bhejte hain...
-    return {"message": "OTP sent"}
+    if send_otp_email(data.email, otp):
+        return {"message": "OTP sent"}
+    raise HTTPException(status_code=500, detail="Failed to send OTP.")
 
 @app.post("/verify-otp")
 def verify_otp(data: VerifyRequest):
     db = load_db()
     if db["otps"].get(data.email) == data.otp:
         db["users"][data.email]["verified"] = True
+        del db["otps"][data.email]
         save_db(db)
         return {"message": "Verified!"}
-    return {"message": "Invalid OTP"}
+    raise HTTPException(status_code=400, detail="Invalid OTP")
 
 @app.post("/login")
 def login(data: AuthRequest):
     db = load_db()
     if data.email in db["users"] and db["users"][data.email]["password"] == data.password:
-        return {"message": "Login successful"}
-    return {"message": "Invalid credentials"}
+        if db["users"][data.email]["verified"]:
+            return {"message": "Login successful"}
+        raise HTTPException(status_code=403, detail="Not verified.")
+    raise HTTPException(status_code=400, detail="Invalid credentials")
