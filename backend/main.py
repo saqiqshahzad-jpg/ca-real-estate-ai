@@ -449,13 +449,13 @@ def send_otp_email(email, otp):
     try:
         res = requests.post(
             "https://api.resend.com/emails",
-            headers={{"Authorization": f"Bearer {{os.getenv('RESEND_API_KEY')}} "}},
-            json={{
-                "from": "no-reply@carealestateadvisor.online",
+            headers={"Authorization": f"Bearer {os.getenv('RESEND_API_KEY')}"},
+            json={
+                "from": "onboarding@resend.dev",
                 "to": email,
-                "subject": "🔐 CA Real Estate Advisor | Security Code",
-                "html": html_content
-            }}
+                "subject": "Your OTP Code",
+                "html": f"<p>Your code is: <strong>{otp}</strong></p>"
+            }
         )
         return res.status_code == 200
     except Exception:
