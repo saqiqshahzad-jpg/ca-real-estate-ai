@@ -290,17 +290,18 @@ def chat(data: ChatMessage):
                     "content": f"""You are a professional California Real Estate Advisor.
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
-RULES:
-1. Provide short and helpful answers using the context.
-2. PROACTIVE RULE: After 2-3 questions, YOU MUST suggest a call with an expert: 'For professional guidance, should I book a free call with our Licensed Expert for you?'
-3. BOOKING RULE (CRITICAL): 
-   - ONLY include the [BOOKING: Name, YYYY-MM-DD HH:mm] tag if the user has ALREADY provided their Name AND a specific Date/Time.
-   - If you are still ASKING for their name or time, DO NOT include the [BOOKING:] tag.
-   - You MUST convert the time to YYYY-MM-DD HH:mm format (e.g., 2026-05-25 10:00).
+BOOKING FLOW (Follow strictly):
+1. First, provide a helpful answer to the user's question.
+2. After answering, if you haven't offered yet, ask: 'Would you like to book a free call with our Licensed Expert?'
+3. If the user wants to book but hasn't provided Name/Time, ASK for them.
+4. AS SOON AS you have the Name and Date/Time (check chat history), STOP asking questions and output ONLY the confirmation text with the tag.
+   FORMAT: [BOOKING: Name, YYYY-MM-DD HH:mm]
+   Example: 'Great! I am booking that for you now. [BOOKING: Muhammad Saqib, 2026-05-18 19:00]'
 
-Strictly adhere to the following guardrails:
-- Answer ONLY California Real Estate questions.
-- If not in context, say: "I apologize, but I cannot find that information in the provided context." """
+GUARDS:
+- NEVER include the [BOOKING:] tag if you are still asking for Name or Time.
+- ALWAYS use YYYY-MM-DD HH:mm format inside the tag.
+- Answer ONLY California Real Estate questions."""
                 },
                 {"role": "user", "content": data.message},
             ],
@@ -308,28 +309,30 @@ Strictly adhere to the following guardrails:
 
         ai_response = completion.choices[0].message.content
         
-        # 📅 MAKE.COM INTEGRATION (Smart Logic)
+        # 📅 MAKE.COM INTEGRATION (Elite Automation)
         if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
             try:
-                tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
+                # Tag se data nikaalna
+                parts = ai_response.split("[BOOKING:")
+                clean_text = parts[0].strip()
+                tag_content = parts[1].split("]")[0]
                 booking_parts = tag_content.split(",")
                 
-                # Check karo ke kya waqai data hai ya AI ne khali dabba bheja hai
                 name_val = booking_parts[0].strip()
                 time_val = booking_parts[1].strip()
 
-                # Agar name ya time bahut chota hai (yani AI ne sahi se nahi bhara) toh skip karo
-                if len(name_val) > 1 and len(time_val) > 5:
+                # Sirf tabhi bhejenge jab data waqai sense bana raha ho
+                if len(name_val) > 2 and len(time_val) > 8:
+                    import requests
                     requests.post(MAKE_WEBHOOK_URL, json={
                         "email": data.email,
                         "name": name_val,
                         "time": time_val
                     })
-                    # Tag mita kar SUCCESS message dikhao
-                    ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
+                    ai_response = clean_text + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
                 else:
-                    # Agar info adhoori hai toh sirf tag mita do, success message mat dikhao
-                    ai_response = ai_response.split("[BOOKING:")[0].strip()
+                    # Agar AI ne khali tag diya toh sirf text dikhao, Scheduled message nahi
+                    ai_response = clean_text
             except Exception:
                 ai_response = ai_response.split("[BOOKING:")[0].strip()
 
@@ -337,7 +340,6 @@ Strictly adhere to the following guardrails:
 
     except Exception as e:
         return {"response": f"System Error: {str(e)}"}
-
 # --- 🔐 AUTH ROUTES ---
 
 @app.post("/signup")
