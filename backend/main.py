@@ -329,27 +329,26 @@ def home():
 from fastapi.responses import StreamingResponse # 👈 Ye import sab se upar dalo
 
 @app.post("/chat")
-async def chat(data: ChatMessage): # 'async' dalo yahan
+async def chat(data: ChatMessage):
     try:
-        # 🏎️ STREAMING ENABLED (Super Fast Speed)
         def generate_response():
+            # 🏎️ Groq se stream shuru
             response = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
-                temperature=0, # 👈 0 matlab bilkul robotic accuracy, koi hoshiyari nahi
+                temperature=0, 
                 messages=[
                     {
                         "role": "system", 
-                        "content": f"""STRICT ROLE: You are a California Real Estate Advisor.
-1. ONLY answer questions from the DOCUMENT CONTEXT below.
-2. If the question is NOT about California Real Estate (e.g., cars, bikes, jet, life advice), say: "🌏 Apologies, I only provide guidance on California Real Estate. How can I help with your property search?"
-3. DO NOT give any general advice outside the context.
-4. BOOKING: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
+                        "content": f"""STRICT ROLE: California Real Estate Advisor.
+1. ONLY answer from DOCUMENT CONTEXT. 
+2. If unrelated (cars, driving, jet), say: "🌏 Apologies, I only provide guidance on California Real Estate."
+3. BOOKING: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
 
-DOCUMENT CONTEXT: {PDF_CONTEXT}"""
+CONTEXT: {PDF_CONTEXT}"""
                     },
                     {"role": "user", "content": data.message},
                 ],
-                stream=True # 👈 Is se bot foran bolna shuru kar dega
+                stream=True
             )
 
             full_content = ""
@@ -357,44 +356,30 @@ DOCUMENT CONTEXT: {PDF_CONTEXT}"""
                 if chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
                     full_content += content
-                    yield content # Frontend ko sath sath data bhejna
-        
-       # 📅 BACKEND LOGIC (The "Anti-Hallucination" Lock)
-        ai_response = completion.choices[0].message.content
-        trigger = "BOOKING:"
-        
-        if trigger in ai_response:
-            try:
-                # 1. Tag nikaalna
-                tag_part = ai_response.split(trigger)[1].replace("[", "").replace("]", "").strip()
-                details = [d.strip() for d in tag_part.split(",")]
-                
-                if len(details) >= 3:
-                    u_name = details[0]
-                    u_time = details[1]
-                    u_email = details[2]
-                    
-                    # 🔐 TRIPLE-LOCK CHECK:
-                    # A) Kya email asli hai?
-                    # B) Kya ye sirf example words toh nahi (Name, Email, YYYY)?
-                    # C) Kya time ki length sahi hai?
-                    
-                    placeholders = ["name", "email", "yyyy", "hh:mm", "your name", "full name"]
-                    is_placeholder = any(p in u_name.lower() or p in u_email.lower() for p in placeholders)
-                    
-                    if "@" in u_email and not is_placeholder and len(u_time) > 8:
-                        send_booking_email(u_name, u_email, u_time)
-                        ai_response = ai_response.split(trigger)[0].replace("[", "").strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
-                    else:
-                        # Agar AI ne example data dia, toh success message mat dikhao
-                        ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
-                else:
-                    ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
-            except:
-                ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
-        # 🚨 YAHAN TAK! 👆
+                    yield content  # Frontend ko foran lafaz bhejna
 
-        return {"response": ai_response}
+            # 📅 BACKEND LOGIC (Stream khatam hone ke baad)
+            trigger = "BOOKING:"
+            if trigger in full_content:
+                try:
+                    # Tag nikaalna
+                    tag_part = full_content.split(trigger)[1].replace("[", "").replace("]", "").strip()
+                    details = [d.strip() for d in tag_part.split(",")]
+                    
+                    if len(details) >= 3:
+                        u_name, u_time, u_email = details[0], details[1], details[2]
+                        # Triple-Lock Validation
+                        placeholders = ["name", "email", "yyyy", "hh:mm"]
+                        is_placeholder = any(p in u_name.lower() or p in u_email.lower() for p in placeholders)
+                        
+                        if "@" in u_email and not is_placeholder and len(u_time) > 8:
+                            send_booking_email(u_name, u_email, u_time)
+                except:
+                    pass
+
+        # 🚀 StreamingResponse return karna
+        return StreamingResponse(generate_response(), media_type="text/plain")
+
     except Exception as e:
         return {"response": f"Error: {str(e)}"}
 
