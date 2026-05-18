@@ -365,6 +365,24 @@ MANDATORY BOOKING RULES:
 
 EXAMPLE RESPONSE:
 'Perfect! I have scheduled your meeting. [BOOKING: Muhammad Saad, 2026-05-19 15:00, saqiqshahzad@gmail.com]' """
+
+# 📅 BACKEND LOGIC (Brackets ke bagair bhi pakarne ki koshish)
+        ai_response = completion.choices[0].message.content
+        
+        # Check for both formats: with brackets or just the word BOOKING
+        if "[BOOKING:" in ai_response or "BOOKING:" in ai_response:
+            try:
+                # Agar bracket hai toh wahan se kato, warna "BOOKING:" se
+                split_word = "[BOOKING:" if "[BOOKING:" in ai_response else "BOOKING:"
+                tag_content = ai_response.split(split_word)[1].split("]")[0] if "]" in ai_response else ai_response.split(split_word)[1]
+                
+                details = [d.strip() for d in tag_content.split(",")]
+                
+                if len(details) >= 3:
+                    send_booking_email(details[0], details[2], details[1])
+                    ai_response = ai_response.split(split_word)[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
+            except Exception:
+                pass
 # --- 🔐 AUTH ROUTES ---
 
 @app.post("/signup")
