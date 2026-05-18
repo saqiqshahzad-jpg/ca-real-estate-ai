@@ -351,12 +351,13 @@ class VerifyRequest(BaseModel):
 def home():
     return {"status": "CA Advisor Server is Running Online! ✅"}
 
+# --- CHAT ROUTE UPDATE ---
 @app.post("/chat")
 def chat(data: ChatMessage):
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            temperature=0.2,
+            temperature=0.1, # 👈 Temperature mazeed kam kar di taake AI "Hoshiyari" na dikhaye
             messages=[
                 {
                     "role": "system", 
@@ -364,10 +365,12 @@ def chat(data: ChatMessage):
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
 STRICT BOOKING RULES:
-1. First, answer real estate questions.
-2. For booking, ask for: Name, Email, and Date/Time. 
-3. Provide this example format to the user: 'Name, Email, Date & Time (e.g., Saqib, saqib@gmail.com, May 20 5 PM)'
-4. Once provided, output the tag: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]"""
+1. If the user provides Name, Email, and Date/Time, YOU MUST IMMEDIATELY trigger the booking.
+2. DO NOT use colons like 'Name:' or 'Date:' inside the tag.
+3. OUTPUT FORMAT: [BOOKING: Full Name, YYYY-MM-DD HH:mm, Email]
+4. EXAMPLE: 'Great! I am booking it now. [BOOKING: Ali, 2026-05-18 23:30, muhammadsaqib1630@gmail.com]'
+5. DO NOT ask for 'confirm' after getting details. Just provide the tag once you have all 3 info pieces.
+6. if user ask non related to DOCUMENT_CONTEXT immediately apologize , DO  NOT ANSWERS TO WHICH IS NOT RELATED TO CALIFORNIA REAL ESTATE"""
                 },
                 {"role": "user", "content": data.message},
             ],
@@ -375,21 +378,20 @@ STRICT BOOKING RULES:
 
         ai_response = completion.choices[0].message.content
         
-        # 📅 DIRECT BACKEND BOOKING (No Make.com!)
-        if "[BOOKING:" in ai_response:
+        # 📅 BACKEND LOGIC (Slightly more flexible to catch brackets)
+        # Check for "[BOOKING:" or "BOOKING:" as a backup
+        trigger_phrase = "[BOOKING:"
+        if trigger_phrase in ai_response:
             try:
-                tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
+                tag_content = ai_response.split(trigger_phrase)[1].split("]")[0]
                 details = [d.strip() for d in tag_content.split(",")]
                 
                 if len(details) >= 3:
                     # Direct call to our email function
-                    success = send_booking_email(details[0], details[2], details[1])
-                    if success:
-                        ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email for the confirmation link.**"
-                else:
-                    ai_response = ai_response.split("[BOOKING:")[0].strip()
+                    send_booking_email(details[0], details[2], details[1])
+                    ai_response = ai_response.split(trigger_phrase)[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email for the confirmation link.**"
             except Exception:
-                ai_response = ai_response.split("[BOOKING:")[0].strip()
+                pass
 
         return {"response": ai_response}
     except Exception as e:
