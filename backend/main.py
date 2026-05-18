@@ -374,8 +374,8 @@ def send_otp_email(email, otp):
             json={
                 "from": "support@carealestateadvisor.online",
                 "to": email,
-                "subject": "Your OTP Code",
-                "html": f"<p>Your code is: <strong>{otp}</strong></p>"
+                "subject": "CA Real Estat Advisor | Your OTP Code",
+                "html": f"<p>Hey Welcome! Your code is: <strong>{otp}</strong></p>"
             }
         )
         return res.status_code == 200
