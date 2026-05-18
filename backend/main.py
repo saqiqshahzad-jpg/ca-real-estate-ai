@@ -335,14 +335,15 @@ def chat(data: ChatMessage):
             messages=[
                 {
                     "role": "system", 
-                    "content": f"""You are a professional California Real Estate Advisor. 
-Answer ONLY using DOCUMENT_CONTEXT. If unrelated, apologize kindly with 🌏.
+"content": f"""You are a professional California Real Estate Advisor. 
+Answer ONLY using DOCUMENT_CONTEXT. If unrelated, just apologize.
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
-MANDATORY BOOKING RULES:
-1. When you have Name, Email, and Time, you MUST output: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
-2. Use SQUARE BRACKETS. 
-3. Act as a REAL agent. NEVER say 'simulated' or 'demonstration'."""
+STRICT BOOKING PROTOCOL:
+1. NEVER output the [BOOKING:] tag unless the user has ALREADY provided their Name, Email, and Time in the chat.
+2. If info is missing, ASK for it. DO NOT make up fake data.
+3. Once (and ONLY once) you have all 3 real details, output: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
+4. Act like a real person, not a demo."""
                 },
                 {"role": "user", "content": data.message},
             ],
@@ -351,26 +352,34 @@ MANDATORY BOOKING RULES:
         # 🚨 ALAAUDIN BRO! YAHAN SE LE KAR NEECHAY TAK KI LINES TUNE GHAIB KAR DI THIN! 👇
         ai_response = completion.choices[0].message.content
         
-        # 📅 BACKEND LOGIC (Smart & Strict Detection)
+       # 📅 BACKEND LOGIC (The "Anti-Hallucination" Lock)
+        ai_response = completion.choices[0].message.content
         trigger = "BOOKING:"
+        
         if trigger in ai_response:
             try:
-                # Tag nikaalna
+                # 1. Tag nikaalna
                 tag_part = ai_response.split(trigger)[1].replace("[", "").replace("]", "").strip()
                 details = [d.strip() for d in tag_part.split(",")]
                 
-                # ELITE VALIDATION: Kya waqai 3 cheezein hain aur sahi hain?
                 if len(details) >= 3:
                     u_name = details[0]
                     u_time = details[1]
                     u_email = details[2]
                     
-                    # Agar email mein '@' nahi hai ya time bohot chota hai, toh reject kar do
-                    if "@" in u_email and len(u_time) > 8 and len(u_name) > 1:
+                    # 🔐 TRIPLE-LOCK CHECK:
+                    # A) Kya email asli hai?
+                    # B) Kya ye sirf example words toh nahi (Name, Email, YYYY)?
+                    # C) Kya time ki length sahi hai?
+                    
+                    placeholders = ["name", "email", "yyyy", "hh:mm", "your name", "full name"]
+                    is_placeholder = any(p in u_name.lower() or p in u_email.lower() for p in placeholders)
+                    
+                    if "@" in u_email and not is_placeholder and len(u_time) > 8:
                         send_booking_email(u_name, u_email, u_time)
-                        # Sirf tabhi success message dikhao jab waqai data sahi ho
                         ai_response = ai_response.split(trigger)[0].replace("[", "").strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
                     else:
+                        # Agar AI ne example data dia, toh success message mat dikhao
                         ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
                 else:
                     ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
