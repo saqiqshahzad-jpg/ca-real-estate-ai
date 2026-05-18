@@ -1,3 +1,14 @@
+const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+
+// Capture mouse movement
+useEffect(() => {
+  const moveCursor = (e) => {
+    setCursorPos({ x: e.clientX, y: e.clientY });
+  };
+  window.addEventListener('mousemove', moveCursor);
+  return () => { window.removeEventListener('mousemove', moveCursor); };
+}, []);
+
 /* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -9,6 +20,38 @@ const accentColors = {
   blue: { bg: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-500', glow: 'bg-blue-500/20' },
   rose: { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500', glow: 'bg-rose-500/20' },
 };
+
+// --- 🏠 PORTFOLIO / LANDING PAGE COMPONENT ---
+const LandingPage = ({ onStart, theme, accent, isDarkMode }) => (
+  <div className={`min-h-screen flex flex-col items-center justify-center p-6 text-center animate-fade-in relative z-50 ${theme.bg}`}>
+    {/* Background Glows */}
+    <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] ${theme.blurOrb1} rounded-full blur-[120px] pointer-events-none`}></div>
+    <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] ${theme.blurOrb2} rounded-full blur-[140px] pointer-events-none`}></div>
+
+    <div className="max-w-3xl relative z-10">
+      <img src={logoImg} alt="Logo" className="w-24 h-24 mx-auto mb-8 rounded-3xl shadow-2xl border border-white/10 animate-bounce" />
+      <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tighter mb-4 ${theme.textPrimary}`}>
+        Muhammad Saqib
+      </h1>
+      <p className={`text-xl md:text-2xl font-bold mb-8 ${accent.text} tracking-wide uppercase`}>
+        AI Automation Specialist
+      </p>
+      <p className={`text-sm md:text-lg mb-12 leading-relaxed ${theme.textSecondary} max-w-xl mx-auto`}>
+        I build high-performance AI solutions. 
+        Secure, Fast, and Elite. just pure code.
+      </p>
+      
+      <div className="flex flex-col md:flex-row gap-4 justify-center">
+        <button onClick={onStart} className={`${accent.bg} text-white px-10 py-4 rounded-2xl font-extrabold text-lg shadow-2xl hover:scale-105 active:scale-95 transition-all`}>
+          Try My AI Advisor 🤖
+        </button>
+        <a href="https://www.linkedin.com/in/muhammad-saqib-aichatbotdeveloper" target="_blank" className={`border ${theme.sidebarBorder} ${theme.textPrimary} px-10 py-4 rounded-2xl font-extrabold text-lg hover:bg-white/5 transition-all`}>
+          LinkedIn Profile
+        </a>
+      </div>
+    </div>
+  </div>
+);
 
 // 🛑 UMAR BHAI FIX: API URL Live wala dalo, warna AI nahi chalega!
 const API_URL = 'https://ca-estate-api.onrender.com'; 
@@ -25,6 +68,8 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [view, setView] = useState('landing'); 
+  
 
   // --- 📱 MOBILE STATE ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

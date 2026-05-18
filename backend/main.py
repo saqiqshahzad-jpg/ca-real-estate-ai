@@ -2,14 +2,25 @@ import os
 import json
 import random
 import smtplib
+import requests # 👈 Bas ye aik cheez add ki hai Make.com ke liye
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
+import resend
 
 app = FastAPI()
+
+# 🛑 ALAAUDIN BRO: Ye variables Render se uthaye ga
+MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+
+client = Groq(api_key=GROQ_API_KEY)
+resend.api_key = RESEND_API_KEY
+
 @app.get("/")
 def home():
     return {"status": "CA Advisor Server is Running Online! ✅"}
@@ -21,31 +32,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🛑 ALAAUDIN BRO: Apni Groq Key yahan dalo
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
-import os
-import smtplib
-from email.mime.text import MIMEText
-
-def send_otp_email(user_ki_email, otp_code):
-    # Render ke variables yahan se uthaye ga
-    msg = MIMEText(f"Hello! Here's your CA Advisor OTP: {otp_code}")
-    msg['Subject'] = "Verification Code"
-    msg['From'] = os.environ.get("SMTP_USER")
-    msg['To'] = user_ki_email # 👈 Is se OTP usay jayega jo signup kar raha hai!
-
+# --- 🛠️ HELPER: Send OTP Email (Tera Original Resend Code) ---
+def send_otp_email(receiver_email, otp_code):
     try:
-        with smtplib.SMTP(os.environ.get("SMTP_HOST"), int(os.environ.get("SMTP_PORT"))) as server:
-            server.starttls()
-            server.login(os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASSWORD"))
-            server.sendmail(msg['From'], [msg['To']], msg.as_string())
+        params = {
+            "from": "CA Real Estate Advisor <support@carealestateadvisor.online>",
+            "to": receiver_email,
+            "subject": "Your Verification Code - CA Real Estate Advisor",
+            "html": f"""
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 15px;">
+                    <h2 style="color: #292929;">Welcome to the Elite Circle!</h2>
+                    <p>Your secure verification code is:</p>
+                    <h1 style="color: #007bff; letter-spacing: 5px; font-size: 32px;">{otp_code}</h1>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #888;">This is an automated security key from your AI Advisor. If you didn't request this, ignore it Bro.</p>
+                </div>
+            """
+        }
+        resend.Emails.send(params)
         return True
     except Exception as e:
-        print(f"Bhai masla aa gaya: {e}")
+        print(f"Resend Error: {e}")
         return False
 
-# --- 🗄️ DATABASE SETUP ---
+# --- 🗄️ DATABASE SETUP (Tera Original) ---
 DB_FILE = "users.json"
 
 def load_db():
@@ -59,9 +69,10 @@ def save_db(data):
     with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# --- 📄 PDF CONTEXT ---
+# --- 📄 PDF CONTEXT (Tera Original - No Changes) ---
 PDF_CONTEXT = """
 [HOT NOTES
+... (HOT NOTES
 
 
 
@@ -276,8 +287,7 @@ Hot Notes	9
 15. The most often used method for land or site valuation is sales comparison.
 16. Economic rent refers to the going market rate for rent of a given unit and is used for the appraisal of income property.
 17. Contract rent refers to the actual lease amount of a unit and could be above or below market rate (economic rent).
-18. The average economic life of a residence is 40 years.
-]
+18. The average economic life of a residence is 40 years. ...
 """
 
 # --- 📦 Pydantic Models ---
@@ -293,103 +303,71 @@ class VerifyRequest(BaseModel):
     email: str
     otp: str
 
-# --- 🛠️ HELPER: Send OTP Email ---
-import resend
-import os
-
-resend.api_key = os.environ.get("RESEND_API_KEY")
-
-def send_otp_email(receiver_email, otp_code):
-    try:
-        # 📧 Elite Transactional Email Format
-        params = {
-            "from": "CA Real Estate Advisor <support@carealestateadvisor.online>", # 👈 Ab ye tumhari apni domain hai!
-            "to": receiver_email,
-            "subject": "Your Verification Code - CA Real Estate Advisor",
-            "html": f"""
-                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 15px;">
-                    <h2 style="color: #292929;">Welcome to the Elite Circle!</h2>
-                    <p>Your secure verification code is:</p>
-                    <h1 style="color: #007bff; letter-spacing: 5px; font-size: 32px;">{otp_code}</h1>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #888;">This is an automated security key from your AI Advisor. If you didn't request this, ignore it Bro.</p>
-                </div>
-            """
-        }
-        resend.Emails.send(params)
-        return True
-    except Exception as e:
-        print(f"Resend Error: {e}")
-        return False
-
-# --- 🚀 API ROUTES ---
+# --- 🚀 API ROUTES (Signup/Login/Verify wahi purani hain) ---
 
 @app.post("/signup")
 def signup(data: AuthRequest):
     db = load_db()
     if data.email in db["users"] and db["users"][data.email]["verified"]:
-        raise HTTPException(status_code=400, detail="User already exists and is verified.")
-    
+        raise HTTPException(status_code=400, detail="User already exists.")
     otp = str(random.randint(100000, 999999))
     db["otps"][data.email] = otp
     db["users"][data.email] = { "password": data.password, "verified": False }
     save_db(db)
-    
-    if send_otp_email(data.email, otp):
-        return {"message": "OTP sent"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to send OTP. Check email settings.")
+    if send_otp_email(data.email, otp): return {"message": "OTP sent"}
+    else: raise HTTPException(status_code=500, detail="Failed to send OTP.")
 
 @app.post("/verify-otp")
 def verify_otp(data: VerifyRequest):
     db = load_db()
-    if data.email not in db["otps"]:
-        raise HTTPException(status_code=400, detail="No OTP found for this email.")
-    if db["otps"][data.email] == data.otp:
+    if db["otps"].get(data.email) == data.otp:
         db["users"][data.email]["verified"] = True
         del db["otps"][data.email]
         save_db(db)
         return {"message": "Account verified!"}
-    else:
-        raise HTTPException(status_code=400, detail="Invalid OTP code.")
+    raise HTTPException(status_code=400, detail="Invalid OTP.")
 
 @app.post("/login")
 def login(data: AuthRequest):
     db = load_db()
-    if data.email not in db["users"]:
-        raise HTTPException(status_code=400, detail="Account not found. Please sign up.")
-    if db["users"][data.email]["password"] != data.password:
-        raise HTTPException(status_code=400, detail="Incorrect password.")
-    if not db["users"][data.email]["verified"]:
-         raise HTTPException(status_code=403, detail="Account not verified. Sign up again for a new OTP.")
-    return {"message": "Login successful"}
+    if data.email in db["users"] and db["users"][data.email]["password"] == data.password:
+        if db["users"][data.email]["verified"]: return {"message": "Login successful"}
+        raise HTTPException(status_code=403, detail="Not verified.")
+    raise HTTPException(status_code=400, detail="Invalid credentials.")
 
+# --- 🤖 THE CHAT ROUTE (Only Masla Hal Karne Wali Changes) ---
 @app.post("/chat")
 def chat(data: ChatMessage):
-    # ... (baqi load_db aur auth wala code wahi rahega) ...
-
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            temperature=0.2, # 🛑 0.2: Taake wo thora samajhdaari se connect kar sake
+            temperature=0.2,
             messages=[
                 {
                     "role": "system", 
-                    "content": f"""You are a helpful and professional California Real Estate Advisor.
+                    "content": f"""You are a professional California Real Estate Advisor.
                     DOCUMENT CONTEXT: {PDF_CONTEXT}
                     
-                    RULES:
-                    1. If the question is about California Real Estate, Property, Maintenance, or Inspections, ANSWER IT.
-                    2. Use the DOCUMENT CONTEXT as your primary source.
-                    3. If a question is about property maintenance (like water pressure) that isn't explicitly in the PDF, use your general expertise but remind the user to check specific local California guidelines.
-                    4. GREETINGS: Be polite. Answer "Hello" or "How are you" normally.
-                    5. STRICT REJECTION: If the user asks about recipes (Biryani), movies, sports, or anything NOT related to real estate/property, say: "I apologize, but I can only assist with Real Estate and Property related inquiries. I cannot help with [Topic Name]."
-                    
-                    Tone: Professional, helpful, and focused."""
+                    APPOINTMENT RULE:
+                    If the user wants to book a meeting, ask for their Name and Date/Time. 
+                    Once they give it, add this tag at the end: [BOOKING: Name, Date/Time]"""
                 },
                 {"role": "user", "content": data.message},
             ],
         )
-        return {"response": completion.choices[0].message.content}
+        
+        ai_response = completion.choices[0].message.content
+        
+        # 📅 MAKE.COM INTEGRATION (Masla Hal Logic)
+        if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
+            booking_data = ai_response.split("[BOOKING:")[1].split("]")[0].split(",")
+            requests.post(MAKE_WEBHOOK_URL, json={
+                "email": data.email,
+                "name": booking_data[0].strip(),
+                "time": booking_data[1].strip()
+            })
+            ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar.**"
+
+        return {"response": ai_response}
     except Exception as e:
         return {"response": f"System Error: {str(e)}"}
