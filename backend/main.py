@@ -367,98 +367,38 @@ def signup(data: AuthRequest):
 
 @app.post("/send-otp")
 def send_otp_email(email, otp):
-    # --- YEH HAI WOH 10/10000 DESIGN ---
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-            .container {{
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-                max-width: 500px;
-                margin: 40px auto;
-                background-color: #ffffff;
-                border: 1px solid #f1f5f9;
-                border-radius: 24px;
-                overflow: hidden;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            }}
-            .header {{
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                padding: 40px 20px;
-                text-align: center;
-            }}
-            .otp-box {{
-                background-color: #f8fafc;
-                border-radius: 16px;
-                padding: 30px;
-                margin: 30px;
-                text-align: center;
-                border: 2px dashed #e2e8f0;
-            }}
-            .otp-code {{
-                font-size: 42px;
-                font-weight: 800;
-                color: #064e3b;
-                letter-spacing: 10px;
-                margin: 10px 0;
-            }}
-            .footer {{
-                padding: 20px;
-                background-color: #f1f5f9;
-                text-align: center;
-                font-size: 12px;
-                color: #64748b;
-            }}
-            /* Subtle Animation Trigger for Modern Clients */
-            .pulse {{
-                animation: pulse-animation 2s infinite;
-            }}
-            @keyframes pulse-animation {{
-                0% {{ transform: scale(1); }}
-                50% {{ transform: scale(1.02); }}
-                100% {{ transform: scale(1); }}
-            }}
-        </style>
-    </head>
-    <body style="background-color: #fbfcfd; padding: 20px;">
-        <div class="container">
-            <div class="header">
-                <h1 style="color: white; margin: 0; font-size: 24px; letter-spacing: -1px;">CA Real Estate Advisor</h1>
-            </div>
-            <div style="padding: 40px 30px; text-align: center;">
-                <h2 style="color: #1e293b; margin-top: 0;">Verify Your Account 🔐</h2>
-                <p style="color: #475569; line-height: 1.6;">Welcome to the future of California Real Estate. Use the secure code below to complete your setup.</p>
-                
-                <div class="otp-box">
-                    <div class="otp-code pulse">{otp}</div>
-                    <p style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px;">Valid for 10 minutes only</p>
-                </div>
-
-                <p style="font-size: 14px; color: #64748b;">If you didn't request this, please ignore this email.</p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2026 CA Real Estate Advisor AI. <br> Built for Elite Property Decisions.</p>
-            </div>
+    # CSS aur HTML ko alag rakhna behtar hai taake brackets clash na karein
+    html_template = f"""
+    <div style="font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 20px; overflow: hidden;">
+        <div style="background: #10b981; padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0;">CA Real Estate Advisor</h1>
         </div>
-    </body>
-    </html>
+        <div style="padding: 30px; text-align: center;">
+            <h2 style="color: #333;">Verify Your Account</h2>
+            <p style="color: #666;">Welcome! Use the secure code below to complete your setup.</p>
+            <div style="background: #f4f4f4; border-radius: 10px; padding: 20px; margin: 20px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #064e3b;">{otp}</span>
+            </div>
+            <p style="font-size: 12px; color: #999;">This code is valid for 10 minutes.</p>
+        </div>
+    </div>
     """
 
     try:
+        # 🚨 Dhiyaan se: Headers aur JSON mein single curly braces hi aayenge!
         res = requests.post(
             "https://api.resend.com/emails",
-            headers={{"Authorization": f"Bearer {{os.getenv('RESEND_API_KEY')}}"}},
-            json={{
+            headers={"Authorization": f"Bearer {os.getenv('RESEND_API_KEY')}"},
+            json={
                 "from": "no-reply@carealestateadvisor.online",
                 "to": email,
                 "subject": "🔐 CA Real Estate Advisor | Security Code",
-                "html": html_content
-            }}
+                "html": html_template
+            }
         )
         return res.status_code == 200
-    except Exception:
+    except Exception as e:
+        print(f"Email Error: {e}")
         return False
 
 @app.post("/verify-otp")
