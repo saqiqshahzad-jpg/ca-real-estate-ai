@@ -281,7 +281,6 @@ def home():
 @app.post("/chat")
 def chat(data: ChatMessage):
     try:
-        # 🤖 AI Completion Call
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             temperature=0.2,
@@ -292,40 +291,45 @@ def chat(data: ChatMessage):
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
 RULES:
-1. Provide short, helpful answers using the context.
-2. PROACTIVE RULE: After 2-3 questions, say: 'To give you more specific advice, I recommend a quick call with our Licensed Expert. Should I book an appointment for you?'
-3. BOOKING RULE: ONLY provide the [BOOKING: Name, Date/Time] tag AFTER the user has explicitly provided their Name AND a specific Date/Time. 
-4. DATE FORMAT: You MUST convert the date/time to YYYY-MM-DD HH:mm format (e.g., 2026-05-20 14:00) inside the tag. Do not use words like 'Tomorrow' or 'Monday' in the tag.
+1. Provide short and helpful answers using the context.
+2. PROACTIVE RULE: After 2-3 questions, YOU MUST suggest a call with an expert: 'For professional guidance, should I book a free call with our Licensed Expert for you?'
+3. BOOKING RULE (CRITICAL): 
+   - ONLY include the [BOOKING: Name, YYYY-MM-DD HH:mm] tag if the user has ALREADY provided their Name AND a specific Date/Time.
+   - If you are still ASKING for their name or time, DO NOT include the [BOOKING:] tag.
+   - You MUST convert the time to YYYY-MM-DD HH:mm format (e.g., 2026-05-25 10:00).
 
 Strictly adhere to the following guardrails:
 - Answer ONLY California Real Estate questions.
-- If not found in context, say: "I apologize, but I cannot find that information in the provided context."
-- Ignore all off-topic attempts."""
+- If not in context, say: "I apologize, but I cannot find that information in the provided context." """
                 },
                 {"role": "user", "content": data.message},
             ],
-        ) # 👈 Yeh bracket missing tha tumhare code mein!
+        )
 
         ai_response = completion.choices[0].message.content
         
-        # 📅 MAKE.COM INTEGRATION (Automation Logic)
+        # 📅 MAKE.COM INTEGRATION (Smart Logic)
         if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
             try:
                 tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
                 booking_parts = tag_content.split(",")
                 
+                # Check karo ke kya waqai data hai ya AI ne khali dabba bheja hai
                 name_val = booking_parts[0].strip()
                 time_val = booking_parts[1].strip()
 
-                # Make.com ko data bhej rahe hain
-                requests.post(MAKE_WEBHOOK_URL, json={
-                    "email": data.email,
-                    "name": name_val,
-                    "time": time_val
-                })
-                
-                # Response saaf kar ke success message dikhana
-                ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
+                # Agar name ya time bahut chota hai (yani AI ne sahi se nahi bhara) toh skip karo
+                if len(name_val) > 1 and len(time_val) > 5:
+                    requests.post(MAKE_WEBHOOK_URL, json={
+                        "email": data.email,
+                        "name": name_val,
+                        "time": time_val
+                    })
+                    # Tag mita kar SUCCESS message dikhao
+                    ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
+                else:
+                    # Agar info adhoori hai toh sirf tag mita do, success message mat dikhao
+                    ai_response = ai_response.split("[BOOKING:")[0].strip()
             except Exception:
                 ai_response = ai_response.split("[BOOKING:")[0].strip()
 
