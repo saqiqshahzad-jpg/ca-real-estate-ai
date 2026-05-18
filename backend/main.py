@@ -10,6 +10,14 @@ import resend
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Ya apni website ka URL dalo
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # 🛑 ALAAUDIN BRO: Ye variables Render se uthaye ga
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -291,14 +299,17 @@ def chat(data: ChatMessage):
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
 STRICT BOOKING RULES:
-1. If the user provides details (Name, Email, Date/Time), YOU MUST check if ALL 3 are present in the CURRENT message.
-2. If ALL 3 are present, output exactly: 'Confirmed! I've booked your meeting. [BOOKING: Name, YYYY-MM-DD HH:mm, Email]'
-3. If ANY detail is missing, ask ONLY for the missing part. PLEASE DO NOT repeat greeting.
-4. Once you have the info, STOP being an advisor and JUST output the [BOOKING:] tag.
+1. If the user wants to book, ask for: Name, Email, and Date/Time.
+2. IMPORTANT: When asking for details, YOU MUST show the user this format example: 
+   'Please provide your details like this: Name, Email, Date & Time (e.g., ABC, abe@gmail.com, May 1  6PM  2026)'
+3. If the user provides ALL 3 details in one message, convert them and output: 
+   'Confirmed! I am booking that now. [BOOKING: Name, YYYY-MM-DD HH:mm, Email]'
+4. DATE FORMAT: Always convert to YYYY-MM-DD HH:mm inside the tag (e.g., 2026-05-20 17:00).
 
-EXAMPLE:
-User: "Saqib, saqib@gmail.com, May 20 5pm"
-AI: "Great, I'm booking it! [BOOKING: Saqib, 2026-05-20 17:00, saqib@gmail.com]"
+GUARDS:
+- DO NOT repeat the greetings. 
+- Only answer Real Estate questions using the provided context. 
+- If details are missing, remind them of the format example.
 
 
 - Answer real estate questions using the DOCUMENT CONTEXT only.
@@ -353,6 +364,23 @@ def signup(data: AuthRequest):
     if send_otp_email(data.email, otp):
         return {"message": "OTP sent"}
     raise HTTPException(status_code=500, detail="Failed to send OTP.")
+
+@app.post("/send-otp")
+def send_otp_email(email, otp):
+    try:
+        res = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {os.getenv('RESEND_API_KEY')}"},
+            json={
+                "from": "onboarding@resend.dev",
+                "to": email,
+                "subject": "Your OTP Code",
+                "html": f"<p>Your code is: <strong>{otp}</strong></p>"
+            }
+        )
+        return res.status_code == 200
+    except Exception:
+        return False
 
 @app.post("/verify-otp")
 def verify_otp(data: VerifyRequest):
