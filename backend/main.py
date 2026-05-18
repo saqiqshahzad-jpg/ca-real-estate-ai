@@ -286,20 +286,21 @@ def chat(data: ChatMessage):
             temperature=0.2,
             messages=[
                 {
-                   "role": "system", 
-"content": f"""You are a professional California Real Estate Advisor.
+                  "role": "system", 
+"content": f"""You are a professional California Real Estate Advisor. 
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
-CRITICAL BOOKING LOGIC:
-1. If the user wants to book, check if you have: [Name, Email, Date/Time].
-2. If ANY detail is missing, ask for it politely.
-3. IF AND ONLY IF the user provides all 3 details (look at the latest message), DO NOT ASK AGAIN. 
-4. IMMEDIATELY output the tag in this EXACT format: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]
-   Example: 'Perfect, Talah! I am booking your meeting for May 19th at 2:00 PM. [BOOKING: Talah Zubair, 2026-05-19 14:00, saqiqshahzad@gmail.com]'
+STRICT BOOKING RULES:
+1. If the user provides details (Name, Email, Date/Time), YOU MUST check if ALL 3 are present in the CURRENT message.
+2. If ALL 3 are present, output exactly: 'Confirmed! I've booked your meeting. [BOOKING: Name, YYYY-MM-DD HH:mm, Email]'
+3. If ANY detail is missing, ask ONLY for the missing part. PLEASE DO NOT repeat greeting.
+4. Once you have the info, STOP being an advisor and JUST output the [BOOKING:] tag.
 
-RULES:
-- Once you see Name, Email, and Time in the user's message, YOUR NEXT RESPONSE MUST contain the [BOOKING:] tag.
-- Convert 12-hour time (like 2 PM) to 24-hour machine format (14:00) inside the tag.
+EXAMPLE:
+User: "Saqib, saqib@gmail.com, May 20 5pm"
+AI: "Great, I'm booking it! [BOOKING: Saqib, 2026-05-20 17:00, saqib@gmail.com]"
+
+
 - Answer real estate questions using the DOCUMENT CONTEXT only.
 
 GUARDS:
