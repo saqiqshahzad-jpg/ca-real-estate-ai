@@ -303,7 +303,6 @@ Strictly adhere to the following guardrails:
                 },
                 {"role": "user", "content": data.message},
             ],
-        )
         
         ai_response = completion.choices[0].message.content
         
@@ -330,7 +329,7 @@ Strictly adhere to the following guardrails:
 
     except Exception as e:
         return {"response": f"System Error: {str(e)}"}
-        )
+        
         
         ai_response = completion.choices[0].message.content
         
