@@ -41,7 +41,7 @@ def save_db(data):
 
 # --- 📄 PDF CONTEXT ---
 PDF_CONTEXT = """
-HOT NOTES
+[HOT NOTES
 
 
 
@@ -257,6 +257,7 @@ Hot Notes	9
 16. Economic rent refers to the going market rate for rent of a given unit and is used for the appraisal of income property.
 17. Contract rent refers to the actual lease amount of a unit and could be above or below market rate (economic rent).
 18. The average economic life of a residence is 40 years.
+]
 """
 
 class ChatMessage(BaseModel):
