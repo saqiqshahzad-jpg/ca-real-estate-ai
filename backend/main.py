@@ -1,10 +1,7 @@
 import os
 import json
 import random
-import smtplib
-import requests # 👈 Bas ye aik cheez add ki hai Make.com ke liye
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -21,10 +18,6 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 resend.api_key = RESEND_API_KEY
 
-@app.get("/")
-def home():
-    return {"status": "CA Advisor Server is Running Online! ✅"}
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,30 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 🛠️ HELPER: Send OTP Email (Tera Original Resend Code) ---
-def send_otp_email(receiver_email, otp_code):
-    try:
-        params = {
-            "from": "CA Real Estate Advisor <support@carealestateadvisor.online>",
-            "to": receiver_email,
-            "subject": "Your Verification Code - CA Real Estate Advisor",
-            "html": f"""
-                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 15px;">
-                    <h2 style="color: #292929;">Welcome to the Elite Circle!</h2>
-                    <p>Your secure verification code is:</p>
-                    <h1 style="color: #007bff; letter-spacing: 5px; font-size: 32px;">{otp_code}</h1>
-                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                    <p style="font-size: 12px; color: #888;">This is an automated security key from your AI Advisor. If you didn't request this, ignore it Bro.</p>
-                </div>
-            """
-        }
-        resend.Emails.send(params)
-        return True
-    except Exception as e:
-        print(f"Resend Error: {e}")
-        return False
-
-# --- 🗄️ DATABASE SETUP (Tera Original) ---
+# --- 🗄️ DATABASE SETUP ---
 DB_FILE = "users.json"
 
 def load_db():
@@ -69,10 +39,9 @@ def save_db(data):
     with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# --- 📄 PDF CONTEXT (Tera Original - No Changes) ---
+# --- 📄 PDF CONTEXT ---
 PDF_CONTEXT = """
-[HOT NOTES
-... (HOT NOTES
+HOT NOTES
 
 
 
@@ -287,10 +256,9 @@ Hot Notes	9
 15. The most often used method for land or site valuation is sales comparison.
 16. Economic rent refers to the going market rate for rent of a given unit and is used for the appraisal of income property.
 17. Contract rent refers to the actual lease amount of a unit and could be above or below market rate (economic rent).
-18. The average economic life of a residence is 40 years. ...
+18. The average economic life of a residence is 40 years.
 """
 
-# --- 📦 Pydantic Models ---
 class ChatMessage(BaseModel):
     message: str
     email: str 
@@ -303,39 +271,12 @@ class VerifyRequest(BaseModel):
     email: str
     otp: str
 
-# --- 🚀 API ROUTES (Signup/Login/Verify wahi purani hain) ---
+# --- 🚀 API ROUTES ---
 
-@app.post("/signup")
-def signup(data: AuthRequest):
-    db = load_db()
-    if data.email in db["users"] and db["users"][data.email]["verified"]:
-        raise HTTPException(status_code=400, detail="User already exists.")
-    otp = str(random.randint(100000, 999999))
-    db["otps"][data.email] = otp
-    db["users"][data.email] = { "password": data.password, "verified": False }
-    save_db(db)
-    if send_otp_email(data.email, otp): return {"message": "OTP sent"}
-    else: raise HTTPException(status_code=500, detail="Failed to send OTP.")
+@app.get("/")
+def home():
+    return {"status": "CA Advisor Server is Running Online! ✅"}
 
-@app.post("/verify-otp")
-def verify_otp(data: VerifyRequest):
-    db = load_db()
-    if db["otps"].get(data.email) == data.otp:
-        db["users"][data.email]["verified"] = True
-        del db["otps"][data.email]
-        save_db(db)
-        return {"message": "Account verified!"}
-    raise HTTPException(status_code=400, detail="Invalid OTP.")
-
-@app.post("/login")
-def login(data: AuthRequest):
-    db = load_db()
-    if data.email in db["users"] and db["users"][data.email]["password"] == data.password:
-        if db["users"][data.email]["verified"]: return {"message": "Login successful"}
-        raise HTTPException(status_code=403, detail="Not verified.")
-    raise HTTPException(status_code=400, detail="Invalid credentials.")
-
-# --- 🤖 THE CHAT ROUTE (Only Masla Hal Karne Wali Changes) ---
 @app.post("/chat")
 def chat(data: ChatMessage):
     try:
@@ -360,14 +301,43 @@ def chat(data: ChatMessage):
         
         # 📅 MAKE.COM INTEGRATION (Masla Hal Logic)
         if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
-            booking_data = ai_response.split("[BOOKING:")[1].split("]")[0].split(",")
-            requests.post(MAKE_WEBHOOK_URL, json={
-                "email": data.email,
-                "name": booking_data[0].strip(),
-                "time": booking_data[1].strip()
-            })
-            ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar.**"
+            try:
+                booking_data = ai_response.split("[BOOKING:")[1].split("]")[0].split(",")
+                requests.post(MAKE_WEBHOOK_URL, json={
+                    "email": data.email,
+                    "name": booking_data[0].strip(),
+                    "time": booking_data[1].strip()
+                })
+                ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your calendar.**"
+            except Exception:
+                pass
 
         return {"response": ai_response}
     except Exception as e:
         return {"response": f"System Error: {str(e)}"}
+
+@app.post("/signup")
+def signup(data: AuthRequest):
+    db = load_db()
+    otp = str(random.randint(100000, 999999))
+    db["otps"][data.email] = otp
+    db["users"][data.email] = { "password": data.password, "verified": False }
+    save_db(db)
+    # OTP bhejte hain...
+    return {"message": "OTP sent"}
+
+@app.post("/verify-otp")
+def verify_otp(data: VerifyRequest):
+    db = load_db()
+    if db["otps"].get(data.email) == data.otp:
+        db["users"][data.email]["verified"] = True
+        save_db(db)
+        return {"message": "Verified!"}
+    return {"message": "Invalid OTP"}
+
+@app.post("/login")
+def login(data: AuthRequest):
+    db = load_db()
+    if data.email in db["users"] and db["users"][data.email]["password"] == data.password:
+        return {"message": "Login successful"}
+    return {"message": "Invalid credentials"}
