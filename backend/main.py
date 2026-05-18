@@ -348,20 +348,7 @@ MANDATORY BOOKING RULES:
             ],
         )
 
-        ai_response = completion.choices[0].message.content
-        
-        # 📅 BACKEND LOGIC (Smart Detection)
-        trigger = "BOOKING:"
-        if trigger in ai_response:
-            try:
-                # Cleaning the tag even if brackets are missing
-                tag_part = ai_response.split(trigger)[1].replace("[", "").replace("]", "").strip()
-                details = [d.strip() for d in tag_part.split(",")]
-                
-                if len(details) >= 3:
-                    send_booking_email(details[0], details[2], details[1])
-                    ai_response = ai_response.split(trigger)[0].replace("[", "").strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
-            except: pass
+       
 
         return {"response": ai_response}
     except Exception as e:
