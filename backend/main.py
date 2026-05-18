@@ -352,50 +352,19 @@ def home():
     return {"status": "CA Advisor Server is Running Online! ✅"}
 
 # --- CHAT ROUTE UPDATE ---
-@app.post("/chat")
-def chat(data: ChatMessage):
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            temperature=0.1, # 👈 Temperature mazeed kam kar di taake AI "Hoshiyari" na dikhaye
-            messages=[
-                {
-                    "role": "system", 
-                    "content": f"""You are a professional California Real Estate Advisor. 
+"role": "system", 
+"content": f"""You are a professional California Real Estate Advisor only answer using DOCUMENT_CONTEXT , IF USER ASK ANYTHING NON-RELATED TO CALIFORNIA REAL ESTATE JUST APOLOGIZE IN KIND WAY WITH EMOJI. DO NOT ANSWER ANY QUESTION WHICH IS NOT-RELATED TO CALIFORNIA REAL ESTATE. 
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
-STRICT BOOKING RULES:
-1. If the user provides Name, Email, and Date/Time, YOU MUST IMMEDIATELY trigger the booking.
-2. DO NOT use colons like 'Name:' or 'Date:' inside the tag.
-3. OUTPUT FORMAT: [BOOKING: Full Name, YYYY-MM-DD HH:mm, Email]
-4. EXAMPLE: 'Great! I am booking it now. [BOOKING: Ali, 2026-05-18 23:30, muhammadsaqib1630@gmail.com]'
-5. DO NOT ask for 'confirm' after getting details. Just provide the tag once you have all 3 info pieces.
-6. if user ask non related to DOCUMENT_CONTEXT immediately apologize , DO  NOT ANSWERS TO WHICH IS NOT RELATED TO CALIFORNIA REAL ESTATE"""
-                },
-                {"role": "user", "content": data.message},
-            ],
-        )
+MANDATORY BOOKING RULES:
+1. When you have Name, Email, and Time, you MUST output the booking tag.
+2. The tag MUST be enclosed in SQUARE BRACKETS. 
+3. EXACT FORMAT: [BOOKING: Full Name, YYYY-MM-DD HH:mm, Email]
+4. CRITICAL: If you do not use '[' and ']', the system will fail. 
+5. NEVER say 'this is a simulated system' or 'demonstration purposes'. Act as a REAL booking agent.
 
-        ai_response = completion.choices[0].message.content
-        
-        # 📅 BACKEND LOGIC (Slightly more flexible to catch brackets)
-        # Check for "[BOOKING:" or "BOOKING:" as a backup
-        trigger_phrase = "[BOOKING:"
-        if trigger_phrase in ai_response:
-            try:
-                tag_content = ai_response.split(trigger_phrase)[1].split("]")[0]
-                details = [d.strip() for d in tag_content.split(",")]
-                
-                if len(details) >= 3:
-                    # Direct call to our email function
-                    send_booking_email(details[0], details[2], details[1])
-                    ai_response = ai_response.split(trigger_phrase)[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email for the confirmation link.**"
-            except Exception:
-                pass
-
-        return {"response": ai_response}
-    except Exception as e:
-        return {"response": f"System Error: {str(e)}"}
+EXAMPLE RESPONSE:
+'Perfect! I have scheduled your meeting. [BOOKING: Muhammad Saad, 2026-05-19 15:00, saqiqshahzad@gmail.com]' """
 # --- 🔐 AUTH ROUTES ---
 
 @app.post("/signup")
