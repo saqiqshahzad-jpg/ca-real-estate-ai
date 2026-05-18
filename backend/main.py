@@ -372,7 +372,7 @@ def send_otp_email(email, otp):
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {os.getenv('RESEND_API_KEY')}"},
             json={
-                "from": "onboarding@resend.dev",
+                "from": "support@carealestateadvisor.online",
                 "to": email,
                 "subject": "Your OTP Code",
                 "html": f"<p>Your code is: <strong>{otp}</strong></p>"
