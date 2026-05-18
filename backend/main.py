@@ -348,11 +348,41 @@ MANDATORY BOOKING RULES:
             ],
         )
 
-       
+        # 🚨 ALAAUDIN BRO! YAHAN SE LE KAR NEECHAY TAK KI LINES TUNE GHAIB KAR DI THIN! 👇
+        ai_response = completion.choices[0].message.content
+        
+        # 📅 BACKEND LOGIC (Smart & Strict Detection)
+        trigger = "BOOKING:"
+        if trigger in ai_response:
+            try:
+                # Tag nikaalna
+                tag_part = ai_response.split(trigger)[1].replace("[", "").replace("]", "").strip()
+                details = [d.strip() for d in tag_part.split(",")]
+                
+                # ELITE VALIDATION: Kya waqai 3 cheezein hain aur sahi hain?
+                if len(details) >= 3:
+                    u_name = details[0]
+                    u_time = details[1]
+                    u_email = details[2]
+                    
+                    # Agar email mein '@' nahi hai ya time bohot chota hai, toh reject kar do
+                    if "@" in u_email and len(u_time) > 8 and len(u_name) > 1:
+                        send_booking_email(u_name, u_email, u_time)
+                        # Sirf tabhi success message dikhao jab waqai data sahi ho
+                        ai_response = ai_response.split(trigger)[0].replace("[", "").strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
+                    else:
+                        ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
+                else:
+                    ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
+            except:
+                ai_response = ai_response.split(trigger)[0].replace("[", "").strip()
+        # 🚨 YAHAN TAK! 👆
 
         return {"response": ai_response}
     except Exception as e:
         return {"response": f"Error: {str(e)}"}
+
+# --- 🔐 AUTH ROUTES SE PEHLE WALA KAAM KHATAM ---
 
 @app.post("/signup")
 def signup(data: AuthRequest):
@@ -382,4 +412,5 @@ def login(data: AuthRequest):
         if db["users"][data.email]["verified"]:
             return {"message": "Login successful"}
         raise HTTPException(status_code=403, detail="Not verified.")
+    raise HTTPException(status_code=400, detail="Invalid credentials")
     raise HTTPException(status_code=400, detail="Invalid credentials")
