@@ -8,32 +8,27 @@ from pydantic import BaseModel
 from groq import Groq
 import resend
 
+# 1️⃣ APP SETUP & CONFIG (Sab se pehle)
 app = FastAPI()
 
+# Render/Environment Variables
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+PDF_CONTEXT = "Yahan apna poora PDF text dalo ya variable define karo" 
+
+client = Groq(api_key=GROQ_API_KEY)
+resend.api_key = RESEND_API_KEY
+
+# CORS Middleware (Sirf aik baar kafi hai)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Ya apni website ka URL dalo
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 🛑 ALAAUDIN BRO: Ye variables Render se uthaye ga
-MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-
-client = Groq(api_key=GROQ_API_KEY)
-resend.api_key = RESEND_API_KEY
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- 🗄️ DATABASE SETUP ---
+# 2️⃣ DATABASE HELPERS
 DB_FILE = "users.json"
 
 def load_db():
@@ -47,6 +42,76 @@ def save_db(data):
     with open(DB_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
+# 3️⃣ EMAIL HELPER (Routes se upar)
+def send_booking_email(user_name, user_email, meeting_time):
+    clean_time = meeting_time.replace("-", "").replace(" ", "T").replace(":", "") + "00Z"
+    cal_link = f"https://www.google.com/calendar/render?action=TEMPLATE&text=Meeting+with+CA+Real+Estate+Advisor&dates={clean_time}/{clean_time}"
+
+    html_booking = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Meeting Confirmed! 🏠</h1>
+        </div>
+        <div style="padding: 40px; background: white;">
+            <h2 style="color: #1e293b;">Hello {user_name},</h2>
+            <p style="color: #475569;">Your consultation has been scheduled for <strong>{meeting_time}</strong>.</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{cal_link}" style="background: #10b981; color: white; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold;">Add to My Calendar</a>
+            </div>
+        </div>
+    </div>
+    """
+    try:
+        requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                "from": "no-reply@carealestateadvisor.online",
+                "to": user_email,
+                "subject": "🏠 Meeting Confirmed: CA Real Estate Advisor",
+                "html": html_booking
+            }
+        )
+        return True
+    except Exception:
+        return False
+
+# 4️⃣ MODELS
+class ChatMessage(BaseModel):
+    message: str
+    email: str
+
+# 5️⃣ API ROUTES (Sab se neechay)
+@app.post("/chat")
+def chat(data: ChatMessage):
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            temperature=0.2,
+            messages=[
+                {
+                    "role": "system", 
+                    "content": f"You are a professional California Real Estate Advisor. DOCUMENT CONTEXT: {PDF_CONTEXT}. If user provides Name, Email, and Time, output: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]"
+                },
+                {"role": "user", "content": data.message},
+            ],
+        )
+
+        ai_response = completion.choices[0].message.content
+        
+        if "[BOOKING:" in ai_response:
+            try:
+                tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
+                details = [d.strip() for d in tag_content.split(",")]
+                if len(details) >= 3:
+                    send_booking_email(details[0], details[2], details[1])
+                    ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email.**"
+            except Exception:
+                pass
+
+        return {"response": ai_response}
+    except Exception as e:
+        return {"response": f"System Error: {str(e)}"}
 # --- 📄 PDF CONTEXT ---
 PDF_CONTEXT = """
 [HOT NOTES
@@ -294,30 +359,15 @@ def chat(data: ChatMessage):
             temperature=0.2,
             messages=[
                 {
-                  "role": "system", 
-"content": f"""You are a professional California Real Estate Advisor. 
+                    "role": "system", 
+                    "content": f"""You are a professional California Real Estate Advisor. 
 DOCUMENT CONTEXT: {PDF_CONTEXT}
 
 STRICT BOOKING RULES:
-1. If the user wants to book, ask for: Name, Email, and Date/Time.
-2. IMPORTANT: When asking for details, YOU MUST show the user this format example: 
-   'Please provide your details like this: Name, Email, Date & Time (e.g., ABC, abe@gmail.com, May 1  6PM  2026)'
-3. If the user provides ALL 3 details in one message, convert them and output: 
-   'Confirmed! I am booking that now. [BOOKING: Name, YYYY-MM-DD HH:mm, Email]'
-4. DATE FORMAT: Always convert to YYYY-MM-DD HH:mm inside the tag (e.g., 2026-05-20 17:00).
-
-GUARDS:
-- DO NOT repeat the greetings. 
-- Only answer Real Estate questions using the provided context. 
-- If details are missing, remind them of the format example.
-
-
-- Answer real estate questions using the DOCUMENT CONTEXT only.
-
-GUARDS:
-- Do NOT use 'guest'. Always ask the user for their email.
-- Date format must be YYYY-MM-DD HH:mm inside the tag.
-- Be polite and professional."""
+1. First, answer real estate questions.
+2. For booking, ask for: Name, Email, and Date/Time. 
+3. Provide this example format to the user: 'Name, Email, Date & Time (e.g., Saqib, saqib@gmail.com, May 20 5 PM)'
+4. Once provided, output the tag: [BOOKING: Name, YYYY-MM-DD HH:mm, Email]"""
                 },
                 {"role": "user", "content": data.message},
             ],
@@ -325,27 +375,19 @@ GUARDS:
 
         ai_response = completion.choices[0].message.content
         
-        # 📅 MAKE.COM INTEGRATION (Elite Fix)
-        if "[BOOKING:" in ai_response and MAKE_WEBHOOK_URL:
+        # 📅 DIRECT BACKEND BOOKING (No Make.com!)
+        if "[BOOKING:" in ai_response:
             try:
-                parts = ai_response.split("[BOOKING:")
-                clean_text = parts[0].strip()
-                tag_content = parts[1].split("]")[0]
+                tag_content = ai_response.split("[BOOKING:")[1].split("]")[0]
+                details = [d.strip() for d in tag_content.split(",")]
                 
-                # Naya format parse kar rahe hain (Name, Time, Email)
-                booking_data = [item.strip() for item in tag_content.split(",")]
-                
-                if len(booking_data) >= 3:
-                    import requests
-                    requests.post(MAKE_WEBHOOK_URL, json={
-                        "name": booking_data[0],
-                        "time": booking_data[1],
-                        "email": booking_data[2] # 👈 User se li hui asli email!
-                    })
-                    ai_response = clean_text + "\n\n✅ **Meeting Scheduled! Check your calendar and email.**"
+                if len(details) >= 3:
+                    # Direct call to our email function
+                    success = send_booking_email(details[0], details[2], details[1])
+                    if success:
+                        ai_response = ai_response.split("[BOOKING:")[0].strip() + "\n\n✅ **Meeting Scheduled! Check your email for the confirmation link.**"
                 else:
-                    # Agar data adhoora hai toh tag mita do
-                    ai_response = clean_text
+                    ai_response = ai_response.split("[BOOKING:")[0].strip()
             except Exception:
                 ai_response = ai_response.split("[BOOKING:")[0].strip()
 
